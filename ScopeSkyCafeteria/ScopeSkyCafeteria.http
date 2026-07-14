@@ -1,0 +1,6 @@
+@ScopeSkyCafeteria_HostAddress = http://localhost:5081
+
+GET {{ScopeSkyCafeteria_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

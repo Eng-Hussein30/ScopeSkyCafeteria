@@ -1,0 +1,58 @@
+﻿using Microsoft.EntityFrameworkCore;
+using ScopeSkyCafeteria.Data;
+using ScopeSkyCafeteria.Models.Domain;
+
+namespace ScopeSkyCafeteria.Repositories
+{
+    public class SQLProductRepository : IProductRepository
+    {
+        private readonly SSCafeteriaDbContext dbContext;
+
+        public SQLProductRepository(SSCafeteriaDbContext dbContext)
+        {
+            this.dbContext = dbContext;
+        }
+
+        public async Task<Product> CreateProductAsync(Product product)
+        {
+            await dbContext.Products.AddAsync(product);
+            await dbContext.SaveChangesAsync();
+            return product;
+        }
+
+        public async Task<Product?> DeleteProductAsync(Guid id)
+        {
+            var existingProduct = await dbContext.Products.Include(p => p.Category).FirstOrDefaultAsync(x => x.Id == id);
+            if (existingProduct == null) { return null; }
+            dbContext.Products.Remove(existingProduct);
+            await dbContext.SaveChangesAsync();
+            return existingProduct;
+        }
+
+        public async Task<List<Product>> GetAllProductsAsync()
+        {
+            return await dbContext.Products.Include(p => p.Category).ToListAsync();
+        }
+
+        public async Task<Product?> GetProductByIdAsync(Guid id)
+        {
+            return await dbContext.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.Id == id);
+        }
+        public async Task<Product?> UpdateProductAsync(Guid id, Product product)
+        {
+            var existingProduct = await dbContext.Products.FirstOrDefaultAsync(p => p.Id == id);
+
+            if (existingProduct == null) { return null; }
+
+            existingProduct.Name = product.Name;
+            existingProduct.Description = product.Description;
+            existingProduct.Price = product.Price;
+            existingProduct.IsAvailable = product.IsAvailable;
+            existingProduct.CategoryId = product.CategoryId;
+
+            await dbContext.SaveChangesAsync();
+
+            return existingProduct;
+        }
+    }
+}
