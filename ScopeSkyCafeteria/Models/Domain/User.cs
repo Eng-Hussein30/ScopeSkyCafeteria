@@ -8,5 +8,8 @@ namespace ScopeSkyCafeteria.Models.Domain
         public string LastName { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public ICollection<Order> CustomerOrders { get; set; } = new List<Order>();
+
+        public ICollection<Order> AssignedOrders { get; set; } = new List<Order>();
     }
 }

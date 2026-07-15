@@ -9,6 +9,7 @@ namespace ScopeSkyCafeteria.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
     public class CategoriesController : ControllerBase
     {
         private readonly ICategoryRepository categoryRepository;

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ScopeSkyCafeteria.DTOs;
 using ScopeSkyCafeteria.Models.Domain;
@@ -9,6 +10,8 @@ namespace ScopeSkyCafeteria.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
+
     public class ProductsController : ControllerBase
     {
         private readonly IProductRepository productRepository;

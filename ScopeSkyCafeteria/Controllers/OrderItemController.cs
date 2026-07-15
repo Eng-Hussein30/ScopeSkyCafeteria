@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ScopeSkyCafeteria.DTOs;
@@ -20,7 +21,7 @@ namespace ScopeSkyCafeteria.Controllers
             this.mapper = mapper;
             this.orderItemRepository = orderItemRepository;
         }
-
+        [Authorize(Roles = "Admin,SuperAdmin")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddOrderItemDTO addOrderItemDTO)
         {
@@ -49,7 +50,7 @@ namespace ScopeSkyCafeteria.Controllers
             return Ok(mapper.Map<OrderItemDTO>(orderItem));
         }
 
-
+        [Authorize(Roles = "Admin,SuperAdmin")]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateOrderItemDTO updateOrderItemDTO)
         {
@@ -61,7 +62,7 @@ namespace ScopeSkyCafeteria.Controllers
             }
             return Ok(mapper.Map<OrderItemDTO>(updatedOrderItem));
         }
-
+        [Authorize(Roles = "Admin,SuperAdmin")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {

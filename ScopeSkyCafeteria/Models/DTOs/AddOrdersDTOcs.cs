@@ -1,11 +1,12 @@
-﻿namespace ScopeSkyCafeteria.Models.DTOs
+﻿using ScopeSkyCafeteria.Models.Domain;
+using ScopeSkyCafeteria.Models.DTOs;
+
+namespace ScopeSkyCafeteria.DTOs
 {
     public class AddOrdersDTO
     {
-        public Guid UserId { get; set; }
-
         public decimal TotalPrice { get; set; }
 
-        public string Status { get; set; } = "Pending";
+        public List<AddOrderItemDTO> OrderItems { get; set; } = new();
     }
 }

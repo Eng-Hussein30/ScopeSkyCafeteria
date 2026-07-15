@@ -4,16 +4,20 @@
     {
         public Guid Id { get; set; }
 
+        // صاحب الطلب
         public Guid UserId { get; set; }
+        public User User { get; set; }
 
-        public User? User { get; set; }
+        // الأدمن الذي استلم الطلب
+        public Guid? AdminId { get; set; }
+        public User? Admin { get; set; }
 
         public decimal TotalPrice { get; set; }
 
-        public string Status { get; set; } = "Pending";
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public List<OrderItem> OrderItems { get; set; } = new();
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }

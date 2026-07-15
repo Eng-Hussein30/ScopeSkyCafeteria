@@ -8,7 +8,13 @@ namespace ScopeSkyCafeteria.Repositories
 
         Task<List<Order>> GetAllOrdersAsync();
 
+        Task<List<Order>> GetOrdersByUserIdAsync(Guid userId);
+
         Task<Order?> GetOrderByIdAsync(Guid id);
+
+        Task<Order?> AcceptOrderAsync(Guid orderId, Guid adminId);
+
+        Task<Order?> ChangeStatusAsync(Guid orderId, OrderStatus status);
 
         Task<Order?> UpdateOrderAsync(Guid id, Order order);
 

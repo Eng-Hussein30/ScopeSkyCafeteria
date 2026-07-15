@@ -9,51 +9,29 @@ namespace ScopeSkyCafeteria.Mapping
     {
         public AutoMapperProfiles()
         {
-            // =========================
-            // Order
-            // =========================
-            CreateMap<Order, OrdersDTO>()
-                .ForMember(dest => dest.UserName,
-                    opt => opt.MapFrom(src => src.User.FirstName + " " + src.User.LastName));
-            CreateMap<AddOrdersDTO, Order>().ReverseMap();
-            CreateMap<UpdateOrdersDTO, Order>().ReverseMap();
-
-
-            // =========================
-            // OrderItem
-            // =========================
-
-            CreateMap<OrderItem, OrderItemDTO>().ReverseMap();
-                CreateMap<AddOrderItemDTO, OrderItem>().ReverseMap();
-                CreateMap<UpdateOrderItemDTO, OrderItem>().ReverseMap();
-
-
-            // =========================
             // Product
-            // =========================
-
             CreateMap<Product, ProductDto>().ReverseMap();
-            CreateMap<CreateProductDto, Product>().ReverseMap();
-            CreateMap<UpdateProductsDTO , Product>();
 
-            // =========================
             // Category
-            // =========================
-
             CreateMap<Category, CategoriesDTO>().ReverseMap();
 
-            CreateMap<AddCategoriesDTO, Category>().ReverseMap();
-            CreateMap<UpdateCategoriesDTO, Category>().ReverseMap();
+            // Order
+            CreateMap<Order, OrdersDTO>()
+                .ForMember(dest => dest.UserName,
+                    opt => opt.MapFrom(src => src.User.UserName))
+                .ForMember(dest => dest.AdminName,
+                    opt => opt.MapFrom(src => src.Admin != null ? src.Admin.UserName : null));
 
+            CreateMap<AddOrdersDTO, Order>();
 
-            // =========================
-            // User
-            // =========================
+            CreateMap<UpdateOrdersDTO, Order>();
 
-                CreateMap<User, UserDTO>().ReverseMap();
-                CreateMap<AddUserDTO, User>().ReverseMap();
+            // OrderItem
+            CreateMap<OrderItem, OrderItemDTO>()
+                .ForMember(dest => dest.ProductName,
+                    opt => opt.MapFrom(src => src.Product.Name));
 
-
+            CreateMap<AddOrderItemDTO, OrderItem>();
         }
     }
 }
