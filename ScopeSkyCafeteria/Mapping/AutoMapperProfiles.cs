@@ -11,9 +11,12 @@ namespace ScopeSkyCafeteria.Mapping
         {
             // Product
             CreateMap<Product, ProductDto>().ReverseMap();
-
+            CreateMap<CreateProductDto, Product>();
+            CreateMap<UpdateProductsDTO, Product>();
             // Category
             CreateMap<Category, CategoriesDTO>().ReverseMap();
+            CreateMap<AddCategoriesDTO, Category>();
+            CreateMap<UpdateCategoriesDTO, Category>();
 
             // Order
             CreateMap<Order, OrdersDTO>()

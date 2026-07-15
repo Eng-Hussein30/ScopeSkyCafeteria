@@ -8,7 +8,7 @@
         public decimal Price { get; set; }
         public bool IsAvailable { get; set; } = true;
         public Guid CategoryId { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     }
     
 }

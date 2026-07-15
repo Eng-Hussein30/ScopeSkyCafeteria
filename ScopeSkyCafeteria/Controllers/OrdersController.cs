@@ -45,10 +45,20 @@ namespace ScopeSkyCafeteria.Controllers
 
             await orderRepository.CreateOrderAsync(orderDomain);
 
-            return CreatedAtAction(
-                nameof(GetOrderById),
-                new { id = orderDomain.Id },
-                mapper.Map<OrdersDTO>(orderDomain));
+            var response = new CreateOrderResponseDTO
+            {
+                Message = "Order created successfully",
+                TotalPrice = orderDomain.TotalPrice,
+                Products = orderDomain.OrderItems.Select(item => new CreateOrderItemResponseDTO
+                {
+                    ProductName = item.Product?.Name ?? string.Empty,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.Price,
+                    TotalPrice = item.Price * item.Quantity
+                }).ToList()
+            };
+
+            return Ok(response);
         }
 
         // =====================================
@@ -56,14 +66,19 @@ namespace ScopeSkyCafeteria.Controllers
         // =====================================
 
         [HttpGet("MyOrders")]
-        [Authorize(Roles = Roles.User)]
         public async Task<IActionResult> GetMyOrders()
         {
             var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
             var orders = await orderRepository.GetOrdersByUserIdAsync(userId);
 
-            return Ok(mapper.Map<List<OrdersDTO>>(orders));
+            var response = new MyOrdersResponseDTO
+            {
+                Orders = mapper.Map<List<OrdersDTO>>(orders),
+                GrandTotal = orders.Sum(o => o.TotalPrice)
+            };
+
+            return Ok(response);
         }
 
         // =====================================

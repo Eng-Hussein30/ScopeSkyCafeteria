@@ -50,8 +50,48 @@ namespace ScopeSkyCafeteria.Repositories
 
         public async Task<Order> CreateOrderAsync(Order order)
         {
-            await dbContext.Orders.AddAsync(order);
+            decimal totalPrice = 0;
 
+            foreach (var item in order.OrderItems)
+            {
+                // التحقق من الكمية
+                if (item.Quantity <= 0)
+                {
+                    throw new Exception("Quantity must be greater than zero.");
+                }
+
+                // جلب المنتج من قاعدة البيانات
+                var product = await dbContext.Products
+                    .FirstOrDefaultAsync(p => p.Id == item.ProductId);
+
+                if (product == null)
+                {
+                    throw new Exception($"Product with Id {item.ProductId} was not found.");
+                }
+
+                // التأكد أن المنتج متوفر
+                if (!product.IsAvailable)
+                {
+                    throw new Exception($"Product '{product.Name}' is unavailable.");
+                }
+
+                // حفظ السعر الحالي داخل OrderItem
+                item.Price = product.Price;
+
+                // ربط المنتج (اختياري لكنه مفيد عند الإرجاع)
+                item.Product = product;
+
+                // حساب السعر الكلي
+                totalPrice += product.Price * item.Quantity;
+            }
+
+            // حفظ السعر الكلي داخل الطلب
+            order.TotalPrice = totalPrice;
+
+            // حالة الطلب الافتراضية
+            order.Status = OrderStatus.Pending;
+
+            await dbContext.Orders.AddAsync(order);
             await dbContext.SaveChangesAsync();
 
             return order;
