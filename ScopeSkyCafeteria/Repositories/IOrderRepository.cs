@@ -4,20 +4,25 @@ namespace ScopeSkyCafeteria.Repositories
 {
     public interface IOrderRepository
     {
+        // User
         Task<Order> CreateOrderAsync(Order order);
-
-        Task<List<Order>> GetAllOrdersAsync();
 
         Task<List<Order>> GetOrdersByUserIdAsync(Guid userId);
 
-        Task<Order?> GetOrderByIdAsync(Guid id);
+        // Admin & SuperAdmin
+        Task<List<Order>> GetAllOrdersAsync();
 
         Task<Order?> AcceptOrderAsync(Guid orderId, Guid adminId);
 
-        Task<Order?> ChangeStatusAsync(Guid orderId, OrderStatus status);
+        Task<Order?> ReadyOrderAsync(Guid orderId);
 
-        Task<Order?> UpdateOrderAsync(Guid id, Order order);
-
+        // SuperAdmin
         Task<Order?> DeleteOrderAsync(Guid id);
+
+        Task<List<Order>> GetPendingOrdersAsync();
+
+        Task<List<Order>> GetAcceptedOrdersAsync();
+
+        Task<List<Order>> GetReadyOrdersAsync();
     }
 }

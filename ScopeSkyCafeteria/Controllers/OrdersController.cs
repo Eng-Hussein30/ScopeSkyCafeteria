@@ -61,11 +61,45 @@ namespace ScopeSkyCafeteria.Controllers
             return Ok(response);
         }
 
+        // ==========================
+        // Admin Accept Order
+        // ==========================
+        [HttpPut("{id:guid}/accept")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+        public async Task<IActionResult> AcceptOrder(Guid id)
+        {
+            try
+            {
+                var adminId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+                var order = await orderRepository.AcceptOrderAsync(id, adminId);
+
+                if (order == null)
+                {
+                    return NotFound("Order not found");
+                }
+
+                return Ok(new
+                {
+                    Message = "Order accepted successfully",
+                    Status = order.Status
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
+        }
+
         // =====================================
         // User Get My Orders
         // =====================================
 
         [HttpGet("MyOrders")]
+        [Authorize(Roles = Roles.User)]
         public async Task<IActionResult> GetMyOrders()
         {
             var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -95,85 +129,35 @@ namespace ScopeSkyCafeteria.Controllers
         }
 
         // =====================================
-        // Get Order By Id
+        // Admin Ready Order
         // =====================================
 
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetOrderById(Guid id)
-        {
-            var order = await orderRepository.GetOrderByIdAsync(id);
-
-            if (order == null)
-            {
-                return NotFound("Order not found");
-            }
-
-            return Ok(mapper.Map<OrdersDTO>(order));
-        }
-
-        // =====================================
-        // Admin Accept Order
-        // =====================================
-
-        [HttpPut("{id:guid}/Accept")]
+        [HttpPut("{id:guid}/ready")]
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
-        public async Task<IActionResult> AcceptOrder(Guid id)
+        public async Task<IActionResult> ReadyOrder(Guid id)
         {
-            var adminId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            var order = await orderRepository.AcceptOrderAsync(id, adminId);
-
-            if (order == null)
+            try
             {
-                return NotFound("Order not found");
+                var order = await orderRepository.ReadyOrderAsync(id);
+
+                if (order == null)
+                {
+                    return NotFound("Order not found");
+                }
+
+                return Ok(new
+                {
+                    Message = "Order is ready",
+                    Status = order.Status
+                });
             }
-
-            return Ok(mapper.Map<OrdersDTO>(order));
-        }
-
-        // =====================================
-        // Change Order Status
-        // =====================================
-
-        [HttpPut("{id:guid}/Status")]
-        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
-        public async Task<IActionResult> ChangeStatus(Guid id, OrderStatus status)
-        {
-            var order = await orderRepository.ChangeStatusAsync(id, status);
-
-            if (order == null)
+            catch (InvalidOperationException ex)
             {
-                return NotFound("Order not found");
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
             }
-
-            return Ok(mapper.Map<OrdersDTO>(order));
-        }
-
-        // =====================================
-        // Update Order
-        // =====================================
-
-        [HttpPut("{id:guid}")]
-        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
-        public async Task<IActionResult> UpdateOrder(
-            Guid id,
-            [FromBody] UpdateOrdersDTO updateOrdersDTO)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var orderDomain = mapper.Map<Order>(updateOrdersDTO);
-
-            var updatedOrder = await orderRepository.UpdateOrderAsync(id, orderDomain);
-
-            if (updatedOrder == null)
-            {
-                return NotFound("Order not found");
-            }
-
-            return Ok(mapper.Map<OrdersDTO>(updatedOrder));
         }
 
         // =====================================
@@ -192,6 +176,45 @@ namespace ScopeSkyCafeteria.Controllers
             }
 
             return Ok(mapper.Map<OrdersDTO>(deletedOrder));
+        }
+
+        // =====================================
+        // Admin & SuperAdmin Get Pending Orders
+        // =====================================
+
+        [HttpGet("pending")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+        public async Task<IActionResult> GetPendingOrders()
+        {
+            var orders = await orderRepository.GetPendingOrdersAsync();
+
+            return Ok(mapper.Map<List<OrdersDTO>>(orders));
+        }
+
+        // =====================================
+        // Admin & SuperAdmin Get Accepted Orders
+        // =====================================
+
+        [HttpGet("accepted")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+        public async Task<IActionResult> GetAcceptedOrders()
+        {
+            var orders = await orderRepository.GetAcceptedOrdersAsync();
+
+            return Ok(mapper.Map<List<OrdersDTO>>(orders));
+        }
+
+        // =====================================
+        // Admin & SuperAdmin Get Ready Orders
+        // =====================================
+
+        [HttpGet("ready")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+        public async Task<IActionResult> GetReadyOrders()
+        {
+            var orders = await orderRepository.GetReadyOrdersAsync();
+
+            return Ok(mapper.Map<List<OrdersDTO>>(orders));
         }
     }
 }

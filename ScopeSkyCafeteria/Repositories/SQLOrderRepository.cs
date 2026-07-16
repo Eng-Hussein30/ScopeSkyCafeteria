@@ -23,6 +23,13 @@ namespace ScopeSkyCafeteria.Repositories
                 return null;
             }
 
+            // لا يمكن قبول الطلب إلا إذا كان Pending
+            if (order.Status != OrderStatus.Pending)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot accept an order with status '{order.Status}'.");
+            }
+
             order.AdminId = adminId;
             order.Status = OrderStatus.Accepted;
 
@@ -31,7 +38,7 @@ namespace ScopeSkyCafeteria.Repositories
             return order;
         }
 
-        public async Task<Order?> ChangeStatusAsync(Guid orderId, OrderStatus status)
+        public async Task<Order?> ReadyOrderAsync(Guid orderId)
         {
             var order = await dbContext.Orders
                 .FirstOrDefaultAsync(o => o.Id == orderId);
@@ -41,7 +48,13 @@ namespace ScopeSkyCafeteria.Repositories
                 return null;
             }
 
-            order.Status = status;
+            // لا يمكن جعل الطلب جاهزاً إلا إذا كان Accepted
+            if (order.Status != OrderStatus.Accepted)
+            {
+                throw new InvalidOperationException("Only accepted orders can be marked as ready.");
+            }
+
+            order.Status = OrderStatus.Ready;
 
             await dbContext.SaveChangesAsync();
 
@@ -123,14 +136,6 @@ namespace ScopeSkyCafeteria.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Order?> GetOrderByIdAsync(Guid id)
-        {
-            return await dbContext.Orders
-                .Include(o => o.User)
-                .Include(o => o.OrderItems)
-                    .ThenInclude(oi => oi.Product)
-                .FirstOrDefaultAsync(o => o.Id == id);
-        }
 
         public async Task<List<Order>> GetOrdersByUserIdAsync(Guid userId)
         {
@@ -142,21 +147,34 @@ namespace ScopeSkyCafeteria.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Order?> UpdateOrderAsync(Guid id, Order order)
+        public async Task<List<Order>> GetPendingOrdersAsync()
         {
-            var existingOrder = await dbContext.Orders
-                .FirstOrDefaultAsync(o => o.Id == id);
-
-            if (existingOrder == null)
-            {
-                return null;
-            }
-
-            existingOrder.Status = order.Status;
-
-            await dbContext.SaveChangesAsync();
-
-            return existingOrder;
+            return await dbContext.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(i => i.Product)
+                .Where(o => o.Status == OrderStatus.Pending)
+                .ToListAsync();
         }
+
+        public async Task<List<Order>> GetAcceptedOrdersAsync()
+        {
+            return await dbContext.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(i => i.Product)
+                .Where(o => o.Status == OrderStatus.Accepted)
+                .ToListAsync();
+        }
+        public async Task<List<Order>> GetReadyOrdersAsync()
+        {
+            return await dbContext.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(i => i.Product)
+                .Where(o => o.Status == OrderStatus.Ready)
+                .ToListAsync();
+        }
+
     }
 }
