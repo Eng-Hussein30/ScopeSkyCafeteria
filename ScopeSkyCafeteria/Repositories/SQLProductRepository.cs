@@ -29,9 +29,28 @@ namespace ScopeSkyCafeteria.Repositories
             return existingProduct;
         }
 
-        public async Task<List<Product>> GetAllProductsAsync()
+        public async Task<List<Product>> GetAllProductsAsync(
+            Guid? categoryId = null,
+            string? search = null)
         {
-            return await dbContext.Products.Include(p => p.Category).ToListAsync();
+            var query = dbContext.Products
+                .Include(p => p.Category)
+                .AsQueryable();
+
+            // Filter by Category
+            if (categoryId.HasValue)
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            // Search by Product Name
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(p =>
+                    p.Name.Contains(search));
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<Product?> GetProductByIdAsync(Guid id)

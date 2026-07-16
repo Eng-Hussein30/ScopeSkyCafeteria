@@ -34,13 +34,13 @@ namespace ScopeSkyCafeteria.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllProducts(
+            [FromQuery] Guid? categoryId,
+            [FromQuery] string? search)
         {
-            var products = await productRepository.GetAllProductsAsync();
+            var products = await productRepository.GetAllProductsAsync(categoryId, search);
 
-            var productsDto = mapper.Map<List<ProductDto>>(products);
-
-            return Ok(productsDto);
+            return Ok(mapper.Map<List<ProductDto>>(products));
         }
 
 

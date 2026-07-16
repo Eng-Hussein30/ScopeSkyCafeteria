@@ -5,7 +5,9 @@ namespace ScopeSkyCafeteria.Repositories
     public interface IProductRepository
     {
         Task<Product>CreateProductAsync(Product product);
-        Task<List<Product>> GetAllProductsAsync();
+        Task<List<Product>> GetAllProductsAsync(
+            Guid? categoryId = null,
+            string? search = null);
         Task<Product?> GetProductByIdAsync(Guid id);
         Task<Product?> UpdateProductAsync(Guid id, Product product);
         Task<Product?> DeleteProductAsync(Guid id);
