@@ -10,7 +10,7 @@ namespace ScopeSkyCafeteria.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,SuperAdmin")]
+
 
     public class ProductsController : ControllerBase
     {
@@ -26,6 +26,7 @@ namespace ScopeSkyCafeteria.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
         public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createProductDto)
         {
             var productDomain = mapper.Map<Product>(createProductDto);
@@ -60,6 +61,7 @@ namespace ScopeSkyCafeteria.Controllers
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
         public async Task<IActionResult> UpdateProduct([FromRoute] Guid id, [FromBody] UpdateProductsDTO updateProductsDTO)
         {
             var productDomain = mapper.Map<Product>(updateProductsDTO);
@@ -75,6 +77,7 @@ namespace ScopeSkyCafeteria.Controllers
 
         [HttpDelete]
         [Route("{id:guid}")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
         public async Task<IActionResult> DeleteProduct([FromRoute] Guid id)
         {
             var deletedProduct = await productRepository.DeleteProductAsync(id);
