@@ -16,11 +16,13 @@ namespace ScopeSkyCafeteria.Controllers
     {
         private readonly IProductRepository productRepository;
         private readonly IMapper mapper;
+        private readonly IWebHostEnvironment webHostEnvironment;
 
-        public ProductsController(IProductRepository productRepository, IMapper mapper)
+        public ProductsController(IProductRepository productRepository, IMapper mapper, IWebHostEnvironment webHostEnvironment)
         {
             this.productRepository = productRepository;
             this.mapper = mapper;
+            this.webHostEnvironment = webHostEnvironment;
         }
 
         [HttpPost]
@@ -80,5 +82,45 @@ namespace ScopeSkyCafeteria.Controllers
             var productDto = mapper.Map<ProductDto>(deletedProduct);
             return Ok(productDto);
         }
+
+        [HttpPost("{id:guid}/upload-image")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadImage(Guid id, [FromForm] UploadProductImageDTO uploadProductImageDTO)
+        {
+            if (uploadProductImageDTO.Image == null || uploadProductImageDTO.Image.Length == 0)
+            {
+                return BadRequest("Please select an image.");
+            }
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(uploadProductImageDTO.Image.FileName);
+
+            var filePath = Path.Combine(
+                webHostEnvironment.WebRootPath,
+                "images",
+                "products",
+                fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await uploadProductImageDTO.Image.CopyToAsync(stream);
+            }
+
+            var imageUrl = "/images/products/" + fileName;
+
+            var updatedProduct = await productRepository.UpdateProductImageAsync(id, imageUrl);
+
+            if (updatedProduct == null)
+            {
+                return NotFound("Product not found.");
+            }
+
+            return Ok(new
+            {
+                Message = "Image uploaded successfully",
+                ImageUrl = imageUrl
+            });
+        }
+
     }
 }

@@ -11,5 +11,6 @@ namespace ScopeSkyCafeteria.Repositories
         Task<Product?> GetProductByIdAsync(Guid id);
         Task<Product?> UpdateProductAsync(Guid id, Product product);
         Task<Product?> DeleteProductAsync(Guid id);
+        Task<Product?> UpdateProductImageAsync(Guid productId, string imageUrl);
     }
 }

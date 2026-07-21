@@ -47,7 +47,7 @@ namespace ScopeSkyCafeteria.Repositories
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(p =>
-                    p.Name.Contains(search));
+                    EF.Functions.Like(p.Name, $"%{search}%"));
             }
 
             return await query.ToListAsync();
@@ -72,6 +72,22 @@ namespace ScopeSkyCafeteria.Repositories
             await dbContext.SaveChangesAsync();
 
             return existingProduct;
+        }
+
+        public async Task<Product?> UpdateProductImageAsync(Guid productId, string imageUrl)
+        {
+            var product = await dbContext.Products.FirstOrDefaultAsync(p => p.Id == productId);
+
+            if (product == null)
+            {
+                return null;
+            }
+
+            product.ImageUrl = imageUrl;
+
+            await dbContext.SaveChangesAsync();
+
+            return product;
         }
     }
 }

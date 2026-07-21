@@ -9,6 +9,7 @@
         public bool IsAvailable { get; set; } = true;
         public Guid CategoryId { get; set; }
 
+
     }
     
 }
