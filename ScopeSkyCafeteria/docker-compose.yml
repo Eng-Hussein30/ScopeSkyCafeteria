@@ -1,0 +1,18 @@
+services:
+  api:
+    build: .
+    ports:
+      - "5000:8080"
+    depends_on:
+      - sqlserver
+    environment:
+      ConnectionStrings__ScopeSkyCafeteriaConnectionStrings: "Server=sqlserver;Database=SSCafeteriaDbContext;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True"
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrongPassword123!"
+    ports:
+      - "1433:1433"
