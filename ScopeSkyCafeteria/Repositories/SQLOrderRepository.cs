@@ -70,7 +70,7 @@ namespace ScopeSkyCafeteria.Repositories
                 // التحقق من الكمية
                 if (item.Quantity <= 0)
                 {
-                    throw new Exception("Quantity must be greater than zero.");
+                    throw new InvalidOperationException("Quantity must be greater than zero.");
                 }
 
                 // جلب المنتج من قاعدة البيانات
@@ -79,13 +79,14 @@ namespace ScopeSkyCafeteria.Repositories
 
                 if (product == null)
                 {
-                    throw new Exception($"Product with Id {item.ProductId} was not found.");
+                    throw new InvalidOperationException($"Product with Id {item.ProductId} was not found.");
                 }
+
 
                 // التأكد أن المنتج متوفر
                 if (!product.IsAvailable)
                 {
-                    throw new Exception($"Product '{product.Name}' is unavailable.");
+                    throw new InvalidOperationException($"Product '{product.Name}' is unavailable.");
                 }
 
                 // حفظ السعر الحالي داخل OrderItem

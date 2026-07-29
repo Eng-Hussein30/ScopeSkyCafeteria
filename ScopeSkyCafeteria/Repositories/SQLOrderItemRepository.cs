@@ -1,4 +1,5 @@
-﻿using ScopeSkyCafeteria.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using ScopeSkyCafeteria.Data;
 using ScopeSkyCafeteria.Models.Domain;
 
 namespace ScopeSkyCafeteria.Repositories
@@ -6,6 +7,7 @@ namespace ScopeSkyCafeteria.Repositories
     public class SQLOrderItemRepository : IOrderItemRepository
     {
         private readonly SSCafeteriaDbContext dbContext;
+
         public SQLOrderItemRepository(SSCafeteriaDbContext dbContext)
         {
             this.dbContext = dbContext;
@@ -13,29 +15,63 @@ namespace ScopeSkyCafeteria.Repositories
 
         public async Task<OrderItem> CreateOrderItemAsync(OrderItem orderItem)
         {
-           await dbContext.OrderItems.AddAsync(orderItem);
+            await dbContext.OrderItems.AddAsync(orderItem);
             await dbContext.SaveChangesAsync();
+
             return orderItem;
         }
 
-        public Task<OrderItem?> DeleteOrderItemAsync(Guid id)
+        public async Task<List<OrderItem>> GetAllOrderItemsAsync()
         {
-            throw new NotImplementedException();
+            return await dbContext.OrderItems
+                .Include(x => x.Product)
+                .Include(x => x.Order)
+                .ToListAsync();
         }
 
-        public Task<List<OrderItem>> GetAllOrderItemsAsync()
+        public async Task<OrderItem?> GetOrderItemByIdAsync(Guid id)
         {
-            throw new NotImplementedException();
+            return await dbContext.OrderItems
+                .Include(x => x.Product)
+                .Include(x => x.Order)
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public Task<OrderItem?> GetOrderItemByIdAsync(Guid id)
+        public async Task<OrderItem?> UpdateOrderItemAsync(Guid id, OrderItem orderItem)
         {
-            throw new NotImplementedException();
+            var existingOrderItem = await dbContext.OrderItems
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (existingOrderItem == null)
+            {
+                return null;
+            }
+
+            existingOrderItem.OrderId = orderItem.OrderId;
+            existingOrderItem.ProductId = orderItem.ProductId;
+            existingOrderItem.Quantity = orderItem.Quantity;
+            existingOrderItem.Price = orderItem.Price;
+
+            await dbContext.SaveChangesAsync();
+
+            return existingOrderItem;
         }
 
-        public Task<OrderItem?> UpdateOrderItemAsync(Guid id, OrderItem orderItem)
+        public async Task<OrderItem?> DeleteOrderItemAsync(Guid id)
         {
-            throw new NotImplementedException();
+            var existingOrderItem = await dbContext.OrderItems
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (existingOrderItem == null)
+            {
+                return null;
+            }
+
+            dbContext.OrderItems.Remove(existingOrderItem);
+
+            await dbContext.SaveChangesAsync();
+
+            return existingOrderItem;
         }
     }
 }

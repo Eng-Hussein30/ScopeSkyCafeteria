@@ -8,19 +8,25 @@ using ScopeSkyCafeteria.Mapping;
 using ScopeSkyCafeteria.Models.Domain;
 using ScopeSkyCafeteria.Repositories;
 using System.Text;
+using DotNetEnv;
 
+
+Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 // ==========================================
 // Database
 // ==========================================
 
+string dbConnection =
+    Environment.GetEnvironmentVariable("DB_CONNECTION")
+    ?? throw new Exception("DB_CONNECTION is missing.");
+
 builder.Services.AddDbContext<SSCafeteriaDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("ScopeSkyCafeteriaConnectionStrings"),
+        dbConnection,
         sqlOptions => sqlOptions.EnableRetryOnFailure()
     ));
-
 // ==========================================
 // Identity
 // ==========================================
@@ -43,11 +49,21 @@ builder.Services
 // ==========================================
 
 string jwtSecretKey =
-    builder.Configuration["Jwt:Key"]
-    ?? "YourFallbackDefaultSuperLongSecretKey123!";
+    Environment.GetEnvironmentVariable("JWT_KEY")
+    ?? throw new Exception("JWT_KEY is missing.");
+
+string jwtIssuer =
+    Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? throw new Exception("JWT_ISSUER is missing.");
+
+string jwtAudience =
+    Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? throw new Exception("JWT_AUDIENCE is missing.");
+
+var signingKey = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(jwtSecretKey));
 
 
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -60,8 +76,8 @@ builder.Services
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
 
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
 
             IssuerSigningKey = signingKey
         };
@@ -84,13 +100,17 @@ builder.Services
 // ==========================================
 
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
+string frontendUrl =
+    Environment.GetEnvironmentVariable("FRONTEND_URL")
+    ?? throw new Exception("FRONTEND_URL is missing.");
+
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
+    options.AddPolicy("FrontendPolicy", policy =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        policy.WithOrigins(frontendUrl)
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -104,7 +124,6 @@ builder.Services.AddScoped<IOrderRepository, SQLOrderRepository>();
 builder.Services.AddScoped<IOrderItemRepository, SQLOrderItemRepository>();
 builder.Services.AddScoped<IUserRepository, SQLUserRepository>();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
-
 // ==========================================
 // OpenAPI
 // ==========================================
@@ -133,6 +152,8 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 
+app.UseCors("FrontendPolicy");
+
 app.UseAuthorization();
 
 app.MapControllers();
@@ -141,13 +162,33 @@ app.MapControllers();
 // Database Migration + Seeding
 // ==========================================
 
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
+
     var services = scope.ServiceProvider;
 
     var db = services.GetRequiredService<SSCafeteriaDbContext>();
 
-    await db.Database.MigrateAsync();
+    const int maxRetry = 5;
+
+    for (int retry = 1; retry <= maxRetry; retry++)
+    {
+        try
+        {
+            await db.Database.MigrateAsync();
+            break;
+        }
+        catch
+        {
+            if (retry == maxRetry)
+                throw;
+
+            Console.WriteLine($"Database is not ready... Retry {retry}/{maxRetry}");
+
+            await Task.Delay(5000);
+        }
+    }
 
     var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     var userManager = services.GetRequiredService<UserManager<User>>();

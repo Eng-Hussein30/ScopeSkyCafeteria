@@ -35,7 +35,7 @@ namespace ScopeSkyCafeteria.Controllers
         public async Task<IActionResult> GetAll()
         {
             var orderItems = await orderItemRepository.GetAllOrderItemsAsync();
-            return Ok(mapper.Map<OrderItemDTO>(orderItems));
+            return Ok(mapper.Map<List<OrderItemDTO>>(orderItems));
         }
 
 
@@ -47,7 +47,7 @@ namespace ScopeSkyCafeteria.Controllers
             {
                 return NotFound();
             }
-            return Ok(mapper.Map<OrderItemDTO>(orderItem));
+            return Ok(mapper.Map<List<OrderItemDTO>>(orderItem));
         }
 
         [Authorize(Roles = "Admin,SuperAdmin")]
@@ -71,7 +71,7 @@ namespace ScopeSkyCafeteria.Controllers
             {
                 return NotFound();
             }
-            return Ok(mapper.Map<OrderItemDTO>(deletedOrderItem));
+            return Ok(mapper.Map<List<OrderItemDTO>>(deletedOrderItem));
         }
     }
 }

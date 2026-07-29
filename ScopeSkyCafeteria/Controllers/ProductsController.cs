@@ -96,7 +96,59 @@ namespace ScopeSkyCafeteria.Controllers
                 return BadRequest("Please select an image.");
             }
 
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(uploadProductImageDTO.Image.FileName);
+            var allowedExtensions = new[]
+            {
+                   ".jpg",
+                   ".jpeg",
+                   ".png",
+                   ".webp"
+            };
+
+            var extension = Path.GetExtension(uploadProductImageDTO.Image.FileName).ToLowerInvariant();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                return BadRequest("Only JPG, JPEG, PNG and WEBP images are allowed.");
+            }
+            const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+
+            if (uploadProductImageDTO.Image.Length > maxFileSize)
+            {
+                return BadRequest("Maximum allowed image size is 10 MB.");
+            }
+
+            var allowedContentTypes = new[]
+            {
+                  "image/jpeg",
+                  "image/png",
+                  "image/webp"
+             };
+
+            if (!allowedContentTypes.Contains(uploadProductImageDTO.Image.ContentType))
+            {
+                return BadRequest("Invalid image format.");
+            }
+
+            var product = await productRepository.GetProductByIdAsync(id);
+
+            if (product == null)
+            {
+                return NotFound("Product not found.");
+            }
+
+            var fileName = Guid.NewGuid().ToString() + extension;
+
+            if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                var oldImagePath = Path.Combine(
+                    webHostEnvironment.WebRootPath,
+                    product.ImageUrl.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
+
+                if (System.IO.File.Exists(oldImagePath))
+                {
+                    System.IO.File.Delete(oldImagePath);
+                }
+            }
 
             var filePath = Path.Combine(
                 webHostEnvironment.WebRootPath,

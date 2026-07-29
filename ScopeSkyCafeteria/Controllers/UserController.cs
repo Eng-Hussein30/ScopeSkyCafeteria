@@ -76,18 +76,15 @@ namespace ScopeSkyCafeteria.Controllers
 
         [HttpPost]
         [Route("Login")]
-
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginRequestDTO)
         {
             var user = await userManager.FindByNameAsync(loginRequestDTO.UserName);
 
-            if (user == null)
-                return BadRequest("User not found");
-
-            var checkPasswordResult = await userManager.CheckPasswordAsync(user, loginRequestDTO.Password);
-
-            if (!checkPasswordResult)
-                return BadRequest("Password is incorrect");
+            if (user == null ||
+                !await userManager.CheckPasswordAsync(user, loginRequestDTO.Password))
+            {
+                return BadRequest("Invalid credentials");
+            }
 
             var token = await tokenRepository.CreatJWTToken(user);
 

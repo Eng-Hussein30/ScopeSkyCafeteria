@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using DotNetEnv;
+using Microsoft.AspNetCore.Identity;
 using ScopeSkyCafeteria.Models.Domain;
 
 namespace ScopeSkyCafeteria.Data
@@ -7,22 +8,26 @@ namespace ScopeSkyCafeteria.Data
     {
         public static async Task SeedUsersAsync(UserManager<User> userManager)
         {
-            // ================= SUPER ADMIN =================
-            var UserNameSuperAdmin = "SuperAdmin";
-            var EmailSuperAdmin = "superadmin@test.com";
 
-            if (await userManager.FindByNameAsync(UserNameSuperAdmin) == null)
+            Env.Load();
+
+            // ================= SUPER ADMIN =================
+            var superAdminUserName = Env.GetString("SUPERADMIN_USERNAME");
+            var superAdminEmail = Env.GetString("SUPERADMIN_EMAIL");
+            var superAdminPassword = Env.GetString("SUPERADMIN_PASSWORD");
+
+            if (await userManager.FindByNameAsync(superAdminUserName) == null)
             {
                 var superAdmin = new User
                 {
                     FirstName = "Super",
                     LastName = "Admin",
-                    UserName = UserNameSuperAdmin,
-                    Email = EmailSuperAdmin,
+                    UserName = superAdminUserName,
+                    Email = superAdminEmail,
                     EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(superAdmin, "SuperAdmin@1996");
+                var result = await userManager.CreateAsync(superAdmin, superAdminPassword);
 
                 if (result.Succeeded)
                 {
@@ -31,21 +36,22 @@ namespace ScopeSkyCafeteria.Data
             }
 
             // ================= ADMIN =================
-            var UserNameAdmin = "Admin";
-            var adminEmail = "admin@test.com";
+            var adminUserName = Env.GetString("ADMIN_USERNAME");
+            var adminEmail = Env.GetString("ADMIN_EMAIL");
+            var adminPassword = Env.GetString("ADMIN_PASSWORD");
 
-            if (await userManager.FindByNameAsync(UserNameAdmin) == null)
+            if (await userManager.FindByNameAsync(adminUserName) == null)
             {
                 var admin = new User
                 {
                     FirstName = "System",
                     LastName = "Admin",
-                    UserName = UserNameAdmin,
+                    UserName = adminUserName,
                     Email = adminEmail,
                     EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(admin, "Admin@1996");
+                var result = await userManager.CreateAsync(admin, adminPassword);
 
                 if (result.Succeeded)
                 {
@@ -54,21 +60,22 @@ namespace ScopeSkyCafeteria.Data
             }
 
             // ================= USER =================
-            var UserNameUser = "User";
-            var EmailUser = "user@test.com";
+            var normalUserName = Env.GetString("USER_USERNAME");
+            var normalUserEmail = Env.GetString("USER_EMAIL");
+            var normalUserPassword = Env.GetString("USER_PASSWORD");
 
-            if (await userManager.FindByNameAsync(UserNameUser) == null)
+            if (await userManager.FindByNameAsync(normalUserName) == null)
             {
                 var user = new User
                 {
                     FirstName = "Default",
                     LastName = "User",
-                    UserName = UserNameUser,
-                    Email = EmailUser,
+                    UserName = normalUserName,
+                    Email = normalUserEmail,
                     EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(user, "User@1996");
+                var result = await userManager.CreateAsync(user, normalUserPassword);
 
                 if (result.Succeeded)
                 {

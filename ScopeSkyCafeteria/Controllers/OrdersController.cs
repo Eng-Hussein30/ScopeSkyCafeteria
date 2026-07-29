@@ -43,7 +43,17 @@ namespace ScopeSkyCafeteria.Controllers
             orderDomain.UserId = userId;
             orderDomain.Status = OrderStatus.Pending;
 
-            await orderRepository.CreateOrderAsync(orderDomain);
+            try
+            {
+                await orderRepository.CreateOrderAsync(orderDomain);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
 
             var response = new CreateOrderResponseDTO
             {
