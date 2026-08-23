@@ -30,11 +30,31 @@ namespace ScopeSkyCafeteria.Mapping
             CreateMap<UpdateOrdersDTO, Order>();
 
             // OrderItem
-            CreateMap<OrderItem, OrderItemDTO>()
-                .ForMember(dest => dest.ProductName,
-                    opt => opt.MapFrom(src => src.Product.Name));
+            CreateMap<OrderItem, OrderItemDTO>().ForMember(dest => dest.ProductName,
+                                                           opt => opt.MapFrom(src => src.Product.Name));
 
             CreateMap<AddOrderItemDTO, OrderItem>();
+
+            // User
+            CreateMap<User, UserDTO>().ReverseMap();
+            CreateMap<AddUserDTO, User>();
+
+
+            // Wallet
+            CreateMap<Wallet, WalletDTO>()
+                .ForMember(dest => dest.UserName,
+                    opt => opt.MapFrom(src => src.User.UserName))
+                .ForMember(dest => dest.FirstName,
+                    opt => opt.MapFrom(src => src.User.FirstName))
+                .ForMember(dest => dest.LastName,
+                    opt => opt.MapFrom(src => src.User.LastName));
+
+            CreateMap<WalletTransaction, WalletTransactionDTO>()
+                .ForMember(dest => dest.PerformedByUserName,
+                    opt => opt.MapFrom(src =>
+                        src.PerformedByUser != null
+                            ? src.PerformedByUser.UserName
+                            : null));
         }
     }
 }

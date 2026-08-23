@@ -10,7 +10,7 @@ namespace ScopeSkyCafeteria.Repositories
     
             public SQLUserRepository(SSCafeteriaDbContext dbContext)
             {
-                dbContext = dbContext;
+                 this.dbContext = dbContext;
             }
     
             public async Task<User> CreateUserAsync(User user)

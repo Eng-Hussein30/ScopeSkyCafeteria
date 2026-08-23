@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using DotNetEnv;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,10 +9,9 @@ using ScopeSkyCafeteria.Mapping;
 using ScopeSkyCafeteria.Models.Domain;
 using ScopeSkyCafeteria.Repositories;
 using System.Text;
-using DotNetEnv;
-
 
 Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ==========================================
@@ -27,6 +27,7 @@ builder.Services.AddDbContext<SSCafeteriaDbContext>(options =>
         dbConnection,
         sqlOptions => sqlOptions.EnableRetryOnFailure()
     ));
+
 // ==========================================
 // Identity
 // ==========================================
@@ -63,8 +64,6 @@ string jwtAudience =
 var signingKey = new SymmetricSecurityKey(
     Encoding.UTF8.GetBytes(jwtSecretKey));
 
-
-
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -100,6 +99,11 @@ builder.Services
 // ==========================================
 
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
+
+// ==========================================
+// CORS
+// ==========================================
+
 string frontendUrl =
     Environment.GetEnvironmentVariable("FRONTEND_URL")
     ?? throw new Exception("FRONTEND_URL is missing.");
@@ -124,6 +128,8 @@ builder.Services.AddScoped<IOrderRepository, SQLOrderRepository>();
 builder.Services.AddScoped<IOrderItemRepository, SQLOrderItemRepository>();
 builder.Services.AddScoped<IUserRepository, SQLUserRepository>();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+builder.Services.AddScoped<IWalletRepository, SQLWalletRepository>();
+
 // ==========================================
 // OpenAPI
 // ==========================================
@@ -168,7 +174,9 @@ if (app.Environment.IsDevelopment())
 
     var services = scope.ServiceProvider;
 
-    var db = services.GetRequiredService<SSCafeteriaDbContext>();
+    // Database Context
+    var dbContext =
+        services.GetRequiredService<SSCafeteriaDbContext>();
 
     const int maxRetry = 5;
 
@@ -176,7 +184,7 @@ if (app.Environment.IsDevelopment())
     {
         try
         {
-            await db.Database.MigrateAsync();
+            await dbContext.Database.MigrateAsync();
             break;
         }
         catch
@@ -184,17 +192,28 @@ if (app.Environment.IsDevelopment())
             if (retry == maxRetry)
                 throw;
 
-            Console.WriteLine($"Database is not ready... Retry {retry}/{maxRetry}");
+            Console.WriteLine(
+                $"Database is not ready... Retry {retry}/{maxRetry}");
 
             await Task.Delay(5000);
         }
     }
 
-    var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-    var userManager = services.GetRequiredService<UserManager<User>>();
+    // Role Manager
+    var roleManager =
+        services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
+    // User Manager
+    var userManager =
+        services.GetRequiredService<UserManager<User>>();
+
+    // Seed Roles
     await RoleSeeding.SeedRolesAsync(roleManager);
-    await UserSeeding.SeedUsersAsync(userManager);
+
+    // Seed Users + Wallets
+    await UserSeeding.SeedUsersAsync(
+        userManager,
+        dbContext);
 }
 
 // ==========================================

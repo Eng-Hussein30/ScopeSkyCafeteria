@@ -11,5 +11,6 @@ namespace ScopeSkyCafeteria.Models.Domain
         public ICollection<Order> CustomerOrders { get; set; } = new List<Order>();
 
         public ICollection<Order> AssignedOrders { get; set; } = new List<Order>();
+        public Wallet? Wallet { get; set; }
     }
 }
