@@ -29,23 +29,99 @@ namespace ScopeSkyCafeteria.Controllers
 
         [HttpPost]
         [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> CreateOrder([FromBody] AddOrdersDTO addOrdersDTO)
+        public async Task<IActionResult> CreateOrder(
+            [FromBody] AddOrdersDTO addOrdersDTO)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
+            // ============================================
+            // Map DTO -> Order
+            // ============================================
+
             var orderDomain = mapper.Map<Order>(addOrdersDTO);
 
-            var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            // ============================================
+            // Get User Id From JWT
+            // ============================================
+
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized("Invalid user identity.");
+            }
 
             orderDomain.UserId = userId;
             orderDomain.Status = OrderStatus.Pending;
 
             try
             {
-                await orderRepository.CreateOrderAsync(orderDomain);
+                // =====================================================
+                // IMPORTANT:
+                // Get the result returned from Repository
+                // =====================================================
+
+                var orderResult =
+                    await orderRepository.CreateOrderAsync(orderDomain);
+
+                // =====================================================
+                // Response
+                // =====================================================
+
+                var response = new CreateOrderResponseDTO
+                {
+                    Message = "Order created successfully",
+
+                    TotalPrice = orderResult.Order.TotalPrice,
+
+                    PaymentMethod = orderResult.Order.PaymentMethod,
+
+                    // ==============================
+                    // Before
+                    // ==============================
+
+                    WalletBalanceBefore =
+                        orderResult.WalletBalanceBefore,
+
+                    DebtBefore =
+                        orderResult.DebtBefore,
+
+                    // ==============================
+                    // Payment
+                    // ==============================
+
+                    PaidFromWallet =
+                        orderResult.PaidFromWallet,
+
+                    AddedToDebt =
+                        orderResult.AddedToDebt,
+
+                    // ==============================
+                    // After
+                    // ==============================
+
+                    WalletBalance =
+                        orderResult.RemainingBalance,
+
+                    CurrentDebt =
+                        orderResult.CurrentDebt,
+
+                    Products = orderResult.Order.OrderItems
+                        .Select(item => new CreateOrderItemResponseDTO
+                        {
+                            ProductName = item.Product?.Name ?? string.Empty,
+                            Quantity = item.Quantity,
+                            UnitPrice = item.Price,
+                            TotalPrice = item.Price * item.Quantity
+                        })
+                        .ToList()
+                };
+
+                return Ok(response);
             }
             catch (InvalidOperationException ex)
             {
@@ -54,23 +130,7 @@ namespace ScopeSkyCafeteria.Controllers
                     Message = ex.Message
                 });
             }
-
-            var response = new CreateOrderResponseDTO
-            {
-                Message = "Order created successfully",
-                TotalPrice = orderDomain.TotalPrice,
-                Products = orderDomain.OrderItems.Select(item => new CreateOrderItemResponseDTO
-                {
-                    ProductName = item.Product?.Name ?? string.Empty,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.Price,
-                    TotalPrice = item.Price * item.Quantity
-                }).ToList()
-            };
-
-            return Ok(response);
         }
-
         // ==========================
         // Admin Accept Order
         // ==========================

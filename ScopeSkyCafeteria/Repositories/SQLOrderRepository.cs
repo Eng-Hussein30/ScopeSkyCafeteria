@@ -1,6 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ScopeSkyCafeteria.Data;
+using ScopeSkyCafeteria.DTOs;
 using ScopeSkyCafeteria.Models.Domain;
+using ScopeSkyCafeteria.Models.DTOs;
+
 
 namespace ScopeSkyCafeteria.Repositories
 {
@@ -17,11 +20,11 @@ namespace ScopeSkyCafeteria.Repositories
         // Create Order
         // =====================================================
 
-        public async Task<Order> CreateOrderAsync(Order order)
+        public async Task<CreateOrderResultDTO> CreateOrderAsync(Order order)
         {
             var strategy = dbContext.Database.CreateExecutionStrategy();
 
-            Order createdOrder = null!;
+            CreateOrderResultDTO result = null!;
 
             await strategy.ExecuteAsync(async () =>
             {
@@ -30,11 +33,26 @@ namespace ScopeSkyCafeteria.Repositories
 
                 try
                 {
+                    // =====================================================
+                    // Variables
+                    // =====================================================
+
                     decimal totalPrice = 0;
 
-                    // =================================================
-                    // Validate Products
-                    // =================================================
+                    decimal paidFromWallet = 0;
+                    decimal addedToDebt = 0;
+
+                    // القيم قبل الخصم
+                    decimal walletBalanceBefore = 0;
+                    decimal debtBefore = 0;
+
+                    // القيم بعد الخصم
+                    decimal remainingBalance = 0;
+                    decimal currentDebt = 0;
+
+                    // =====================================================
+                    // Validate Products & Calculate Total Price
+                    // =====================================================
 
                     foreach (var item in order.OrderItems)
                     {
@@ -59,19 +77,19 @@ namespace ScopeSkyCafeteria.Repositories
                                 $"Product '{product.Name}' is unavailable.");
                         }
 
-                        // استخدام السعر الحالي للمنتج
+                        // سعر المنتج الحقيقي من قاعدة البيانات
                         item.Price = product.Price;
 
-                        // ربط المنتج
+                        // حتى يظهر اسم المنتج في الـ Response
                         item.Product = product;
 
-                        // حساب السعر الإجمالي
+                        // حساب مجموع الطلب
                         totalPrice += product.Price * item.Quantity;
                     }
 
-                    // =================================================
+                    // =====================================================
                     // Set Order Data
-                    // =================================================
+                    // =====================================================
 
                     order.TotalPrice = totalPrice;
                     order.Status = OrderStatus.Pending;
@@ -81,9 +99,9 @@ namespace ScopeSkyCafeteria.Repositories
                         order.Id = Guid.NewGuid();
                     }
 
-                    // =================================================
+                    // =====================================================
                     // Get User Wallet
-                    // =================================================
+                    // =====================================================
 
                     var wallet = await dbContext.Wallets
                         .FirstOrDefaultAsync(w => w.UserId == order.UserId);
@@ -94,95 +112,176 @@ namespace ScopeSkyCafeteria.Repositories
                             "User wallet was not found.");
                     }
 
-                    // =================================================
-                    // Calculate Payment
-                    // =================================================
+                    // =====================================================
+                    // Save Wallet Values BEFORE Payment
+                    // =====================================================
 
-                    decimal amountFromBalance =
-                        Math.Min(wallet.Balance, order.TotalPrice);
+                    walletBalanceBefore = wallet.Balance;
+                    debtBefore = wallet.Debt;
 
-                    decimal amountToDebt =
-                        order.TotalPrice - amountFromBalance;
+                    // =====================================================
+                    // Wallet Payment
+                    // =====================================================
 
-                    // =================================================
-                    // Deduct Balance
-                    // =================================================
-
-                    if (amountFromBalance > 0)
+                    if (order.PaymentMethod == PaymentMethod.Wallet)
                     {
-                        wallet.Balance -= amountFromBalance;
+                        // =================================================
+                        // Calculate Amount Paid From Wallet
+                        // =================================================
+
+                        paidFromWallet = Math.Min(
+                            walletBalanceBefore,
+                            totalPrice);
+
+                        // =================================================
+                        // Calculate Remaining Amount As Debt
+                        // =================================================
+
+                        addedToDebt = totalPrice - paidFromWallet;
+
+                        // =================================================
+                        // Calculate NEW Wallet Balance
+                        // =================================================
+
+                        remainingBalance =
+                            walletBalanceBefore - paidFromWallet;
+
+                        // =================================================
+                        // Calculate NEW Debt
+                        // =================================================
+
+                        currentDebt =
+                            debtBefore + addedToDebt;
+
+                        // =================================================
+                        // Update Wallet
+                        // =================================================
+
+                        wallet.Balance = remainingBalance;
+                        wallet.Debt = currentDebt;
+                        wallet.UpdatedAt = DateTime.UtcNow;
+
+                        // =================================================
+                        // Wallet Purchase Transaction
+                        // =================================================
+
+                        if (paidFromWallet > 0)
+                        {
+                            var purchaseTransaction = new WalletTransaction
+                            {
+                                Id = Guid.NewGuid(),
+                                WalletId = wallet.Id,
+                                Amount = paidFromWallet,
+                                Type = WalletTransactionType.Purchase,
+                                OrderId = order.Id,
+                                PerformedByUserId = order.UserId,
+                                Note =
+                                    $"Payment for order #{order.Id} from wallet balance",
+                                CreatedAt = DateTime.UtcNow
+                            };
+
+                            await dbContext.WalletTransactions.AddAsync(
+                                purchaseTransaction);
+                        }
+
+                        // =================================================
+                        // Debt Transaction
+                        // =================================================
+
+                        if (addedToDebt > 0)
+                        {
+                            var debtTransaction = new WalletTransaction
+                            {
+                                Id = Guid.NewGuid(),
+                                WalletId = wallet.Id,
+                                Amount = addedToDebt,
+                                Type = WalletTransactionType.Debt,
+                                OrderId = order.Id,
+                                PerformedByUserId = order.UserId,
+                                Note =
+                                    $"Remaining amount of order #{order.Id} added to debt",
+                                CreatedAt = DateTime.UtcNow
+                            };
+
+                            await dbContext.WalletTransactions.AddAsync(
+                                debtTransaction);
+                        }
                     }
 
-                    // =================================================
-                    // Add Remaining Amount To Debt
-                    // =================================================
+                    // =====================================================
+                    // Cash Payment
+                    // =====================================================
 
-                    if (amountToDebt > 0)
+                    else if (order.PaymentMethod == PaymentMethod.Cash)
                     {
-                        wallet.Debt += amountToDebt;
+                        // الكاش لا يخصم من المحفظة
+                        // ولا يضيف دين
+
+                        paidFromWallet = 0;
+                        addedToDebt = 0;
+
+                        // تبقى المحفظة والدين كما هما
+                        remainingBalance = walletBalanceBefore;
+                        currentDebt = debtBefore;
                     }
 
-                    wallet.UpdatedAt = DateTime.UtcNow;
+                    // =====================================================
+                    // Invalid Payment Method
+                    // =====================================================
 
-                    // =================================================
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            "Invalid payment method.");
+                    }
+
+                    // =====================================================
                     // Add Order
-                    // =================================================
+                    // =====================================================
 
                     await dbContext.Orders.AddAsync(order);
 
-                    // =================================================
-                    // Wallet Transaction - Purchase
-                    // =================================================
-
-                    if (amountFromBalance > 0)
-                    {
-                        var purchaseTransaction = new WalletTransaction
-                        {
-                            Id = Guid.NewGuid(),
-                            WalletId = wallet.Id,
-                            Amount = amountFromBalance,
-                            Type = WalletTransactionType.Purchase,
-                            OrderId = order.Id,
-                            PerformedByUserId = order.UserId,
-                            Note = "Payment for order from wallet balance",
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        await dbContext.WalletTransactions.AddAsync(
-                            purchaseTransaction);
-                    }
-
-                    // =================================================
-                    // Wallet Transaction - Debt
-                    // =================================================
-
-                    if (amountToDebt > 0)
-                    {
-                        var debtTransaction = new WalletTransaction
-                        {
-                            Id = Guid.NewGuid(),
-                            WalletId = wallet.Id,
-                            Amount = amountToDebt,
-                            Type = WalletTransactionType.Debt,
-                            OrderId = order.Id,
-                            PerformedByUserId = order.UserId,
-                            Note = "Remaining order amount added to debt",
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        await dbContext.WalletTransactions.AddAsync(
-                            debtTransaction);
-                    }
-
-                    // =================================================
+                    // =====================================================
                     // Save Everything
-                    // =================================================
+                    // =====================================================
 
                     await dbContext.SaveChangesAsync();
 
+                    // =====================================================
+                    // Commit Transaction
+                    // =====================================================
+
                     await transaction.CommitAsync();
 
-                    createdOrder = order;
+                    // =====================================================
+                    // Create Result
+                    // =====================================================
+
+                    result = new CreateOrderResultDTO
+                    {
+                        Order = order,
+
+                        // ==============================
+                        // BEFORE
+                        // ==============================
+
+                        WalletBalanceBefore = walletBalanceBefore,
+                        DebtBefore = debtBefore,
+
+                        // ==============================
+                        // PAYMENT
+                        // ==============================
+
+                        PaidFromWallet = paidFromWallet,
+                        AddedToDebt = addedToDebt,
+
+                        // ==============================
+                        // AFTER
+                        // ==============================
+
+                        RemainingBalance = remainingBalance,
+                        CurrentDebt = currentDebt
+                    };
                 }
                 catch
                 {
@@ -191,7 +290,7 @@ namespace ScopeSkyCafeteria.Repositories
                 }
             });
 
-            return createdOrder;
+            return result;
         }
 
         // =====================================================
@@ -346,4 +445,4 @@ namespace ScopeSkyCafeteria.Repositories
                 .ToListAsync();
         }
     }
-}   //  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiVXNlciIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWVpZGVudGlmaWVyIjoiOGY5Mjc3YjgtMzVmYS00N2U0LWU1N2EtMDhkZWUxODNmNWU2IiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvZW1haWxhZGRyZXNzIjoidXNlckB0ZXN0LmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IlVzZXIiLCJleHAiOjE3ODc0OTg0NTYsImlzcyI6IlNjb3BlU2t5Q2FmZXRlcmlhIiwiYXVkIjoiU2NvcGVTa3lDYWZldGVyaWFVc2VycyJ9.E9FJ64ciTZikm9bN_FCz8wvM7VtCjNt-kUsKE2xA6po                                                     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////           eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiQWRtaW4iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6ImZiNDNiM2UyLTMwMGQtNGQ2My1lNTc5LTA4ZGVlMTgzZjVlNiIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFkbWluQHRlc3QuY29tIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW4iLCJleHAiOjE3ODc0OTg0OTgsImlzcyI6IlNjb3BlU2t5Q2FmZXRlcmlhIiwiYXVkIjoiU2NvcGVTa3lDYWZldGVyaWFVc2VycyJ9.TlLA_ADgC8aAZSUPjF8ESCuTp0QUY-xVRgqhks8Ke8s
+} 

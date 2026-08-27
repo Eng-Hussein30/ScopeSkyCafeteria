@@ -6,5 +6,7 @@ namespace ScopeSkyCafeteria.DTOs
     public class AddOrdersDTO
     {
         public List<AddOrderItemDTO> OrderItems { get; set; } = new();
+
+        public PaymentMethod PaymentMethod { get; set; }
     }
 }

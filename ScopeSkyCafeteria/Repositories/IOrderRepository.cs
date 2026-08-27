@@ -1,11 +1,13 @@
-﻿using ScopeSkyCafeteria.Models.Domain;
+﻿using ScopeSkyCafeteria.DTOs;
+using ScopeSkyCafeteria.Models.Domain;
+using ScopeSkyCafeteria.Models.DTOs;
 
 namespace ScopeSkyCafeteria.Repositories
 {
     public interface IOrderRepository
     {
         // User
-        Task<Order> CreateOrderAsync(Order order);
+        Task<CreateOrderResultDTO> CreateOrderAsync(Order order);
 
         Task<List<Order>> GetOrdersByUserIdAsync(Guid userId);
 

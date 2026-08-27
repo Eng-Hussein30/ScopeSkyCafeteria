@@ -14,6 +14,9 @@
 
         public decimal TotalPrice { get; set; }
 
+        // طريقة الدفع
+        public PaymentMethod PaymentMethod { get; set; }
+
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
