@@ -11,19 +11,25 @@ namespace ScopeSkyCafeteria.Models.DTOs
         [Required]
         [StringLength(20, MinimumLength = 3)]
         public string? LastName { get; set; }
+
         [Required]
         [StringLength(20, MinimumLength = 3)]
-        public string UserName { get; set; }
+        public string UserName { get; set; } = string.Empty;
+
+        [Required]
+        [Phone]
+        public string PhoneNumber { get; set; } = string.Empty;
 
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [Required]
         [DataType(DataType.Password)]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
 
-        public string Role { get; set; }
+        public string Role { get; set; } = string.Empty;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

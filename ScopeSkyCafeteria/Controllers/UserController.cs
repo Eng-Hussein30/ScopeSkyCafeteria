@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ScopeSkyCafeteria.Models.Domain;
 using ScopeSkyCafeteria.Models.DTOs;
 using ScopeSkyCafeteria.Repositories;
@@ -44,32 +45,65 @@ namespace ScopeSkyCafeteria.Controllers
             [FromBody] AddUserDTO addUserDTO)
         {
             if (!ModelState.IsValid)
+            {
                 return BadRequest(ModelState);
+            }
+
+            // ==========================================
+            // Check Email
+            // ==========================================
 
             var existingEmail =
                 await userManager.FindByEmailAsync(addUserDTO.Email);
-
-            var existingUserName =
-                await userManager.FindByNameAsync(addUserDTO.UserName);
 
             if (existingEmail != null)
             {
                 return BadRequest("Email already exists.");
             }
 
+            // ==========================================
+            // Check Username
+            // ==========================================
+
+            var existingUserName =
+                await userManager.FindByNameAsync(addUserDTO.UserName);
+
             if (existingUserName != null)
             {
                 return BadRequest("Username already exists.");
             }
+
+            // ==========================================
+            // Check Phone Number
+            // ==========================================
+
+            var existingPhoneNumber =
+                await userManager.Users
+                    .FirstOrDefaultAsync(
+                        u => u.PhoneNumber == addUserDTO.PhoneNumber);
+
+            if (existingPhoneNumber != null)
+            {
+                return BadRequest("Phone number already exists.");
+            }
+
+            // ==========================================
+            // Create Identity User
+            // ==========================================
 
             var identityUser = new User
             {
                 FirstName = addUserDTO.FirstName,
                 LastName = addUserDTO.LastName,
                 UserName = addUserDTO.UserName,
+                PhoneNumber = addUserDTO.PhoneNumber,
                 Email = addUserDTO.Email,
                 EmailConfirmed = true
             };
+
+            // ==========================================
+            // Create User
+            // ==========================================
 
             var result =
                 await userManager.CreateAsync(
@@ -80,6 +114,10 @@ namespace ScopeSkyCafeteria.Controllers
             {
                 return BadRequest(result.Errors);
             }
+
+            // ==========================================
+            // Assign Role
+            // ==========================================
 
             var role = string.IsNullOrEmpty(addUserDTO.Role)
                 ? Roles.User
@@ -97,17 +135,24 @@ namespace ScopeSkyCafeteria.Controllers
                 return BadRequest(roleResult.Errors);
             }
 
-            // إنشاء المحفظة تلقائياً
+            // ==========================================
+            // Create Wallet Automatically
+            // ==========================================
+
             await walletRepository.CreateWalletAsync(identityUser.Id);
+
+            // ==========================================
+            // Response
+            // ==========================================
 
             return Ok(new
             {
                 message = "User created successfully",
                 userId = identityUser.Id,
-                userName = identityUser.UserName
+                userName = identityUser.UserName,
+                phoneNumber = identityUser.PhoneNumber
             });
         }
-
         // ==========================================
         // Login
         // ==========================================
@@ -117,9 +162,15 @@ namespace ScopeSkyCafeteria.Controllers
         public async Task<IActionResult> Login(
             [FromBody] LoginRequestDTO loginRequestDTO)
         {
-            var user =
-                await userManager.FindByNameAsync(
-                    loginRequestDTO.UserName);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // البحث عن المستخدم بواسطة رقم الهاتف
+            var user = await userManager.Users
+                .FirstOrDefaultAsync(
+                    u => u.PhoneNumber == loginRequestDTO.PhoneNumber);
 
             if (user == null ||
                 !await userManager.CheckPasswordAsync(

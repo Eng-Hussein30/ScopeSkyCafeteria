@@ -7,9 +7,8 @@ namespace ScopeSkyCafeteria.Models.DTOs
 
         [Required]
 
-        public string UserName { get; set; }
-
+        public string PhoneNumber { get; set; } = string.Empty;
         [Required]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
     }
 }
