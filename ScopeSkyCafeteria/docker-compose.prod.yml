@@ -1,0 +1,159 @@
+# =============================================================================
+# ScopeSky Cafeteria — PRODUCTION stack (SQL Server + API + Frontend + Caddy)
+# =============================================================================
+# This is deliberately a separate, self-contained file rather than a merge
+# override of docker-compose.yml. Docker Compose's merge behavior for *removing*
+# a list value (like unpublishing a port) depends on YAML reset-tag support
+# that varies by Compose version — for something as security-relevant as "which
+# ports face the internet," an explicit, unambiguous file is safer than relying
+# on override-merge semantics working a particular way on a particular machine.
+#
+# It intentionally mirrors docker-compose.yml's service names, environment
+# variable names, and defaults, so the SAME .env file works for both — only
+# the command used to start the stack differs:
+#
+#   Development (unchanged):
+#     docker compose up --build
+#
+#   Production:
+#     docker compose -f docker-compose.prod.yml up -d --build
+#
+# Key differences from docker-compose.yml:
+#   - api and frontend publish NO ports to the host. Caddy reaches them over
+#     the internal Docker network by service name (api:8080, frontend:4173),
+#     exactly like the API already reaches SQL Server by service name.
+#   - frontend builds the Dockerfile's "production" target (built static
+#     files served by `serve`) instead of "development" (Vite dev server).
+#   - ASPNETCORE_ENVIRONMENT defaults to Production instead of Development.
+#   - A caddy service is added: the only container that publishes ports
+#     (80/443) to the internet, terminating HTTPS automatically for the
+#     domain set in DOMAIN (.env).
+#
+# SQL Server keeps the exact same loopback-only default as development — it
+# is never intended to be internet-reachable in either environment.
+# =============================================================================
+
+services:
+  api:
+    build: .
+    container_name: ${API_CONTAINER_NAME:-scopesky-api}
+    restart: unless-stopped
+
+    env_file:
+      - path: .env
+        required: false
+
+    # No `ports:` — intentionally not published to the host. Only Caddy
+    # talks to this container, over the internal Docker network.
+
+    volumes:
+      - wwwroot_data:/app/wwwroot
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+
+      DB_CONNECTION: "Server=${DB_HOST:-sqlserver},${DB_PORT:-1433};Database=${DB_NAME:-ScopeSkyCafeteriaDb};User Id=${DB_USER:-sa};Password=${MSSQL_SA_PASSWORD:-YourStrongPassword123!};TrustServerCertificate=True;Connect Timeout=60"
+
+      RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
+      DB_MIGRATE_MAX_ATTEMPTS: ${DB_MIGRATE_MAX_ATTEMPTS:-12}
+      DB_MIGRATE_RETRY_DELAY_SECONDS: ${DB_MIGRATE_RETRY_DELAY_SECONDS:-5}
+
+      JWT_KEY: ${JWT_KEY:-HhAa19961968Mm2003AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoBbQqRrSsTtUuVvWwXxYyZz}
+      JWT_ISSUER: ${JWT_ISSUER:-ScopeSkyCafeteria}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ScopeSkyCafeteriaUsers}
+
+      # Set this to your real domain in .env, e.g. FRONTEND_URL=https://mycafe.com
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-SuperAdmin}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-superadmin@test.com}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-SuperAdmin@1996}
+
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@test.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@1996}
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ${SQL_CONTAINER_NAME:-sqlserver}
+    restart: unless-stopped
+
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-YourStrongPassword123!}
+
+    ports:
+      # Same loopback-only default as development. Not internet-facing in
+      # either environment — this only allows an SSH-tunneled admin
+      # connection from the VPS itself if you ever need one.
+      - "${SQL_BIND:-127.0.0.1}:${SQL_HOST_PORT:-1433}:1433"
+
+    volumes:
+      - sql_data:/var/opt/mssql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'SQLCMD=$$(command -v sqlcmd || echo /opt/mssql-tools18/bin/sqlcmd); "$$SQLCMD" -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ../../Frontend
+      target: production
+    container_name: ${FRONTEND_CONTAINER_NAME:-scopesky-frontend}
+    restart: unless-stopped
+
+    # No `ports:` — Caddy reaches this over the internal Docker network at
+    # frontend:4173. No source volume mount either: production serves the
+    # built dist/ baked into the image, not live-mounted source.
+
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: ${CADDY_CONTAINER_NAME:-scopesky-caddy}
+    restart: unless-stopped
+
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      # Set DOMAIN=mycafe.com in .env for production. Defaults to localhost
+      # (no real cert) so this file doesn't hard-fail without a domain set.
+      DOMAIN: ${DOMAIN:-localhost}
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+    depends_on:
+      - api
+      - frontend
+
+volumes:
+  sql_data:
+  wwwroot_data:
+  caddy_data:
+  caddy_config:
