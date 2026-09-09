@@ -9,6 +9,9 @@ using ScopeSkyCafeteria.Mapping;
 using ScopeSkyCafeteria.Models.Domain;
 using ScopeSkyCafeteria.Repositories;
 using System.Text;
+using Minio;
+using ScopeSkyCafeteria.Services.Implementations;
+using ScopeSkyCafeteria.Services.Interfaces;
 
 Env.Load();
 
@@ -118,6 +121,35 @@ builder.Services.AddCors(options =>
     });
 });
 
+
+// ==========================================
+// MinIO
+// ==========================================
+
+string minioEndpoint =
+    Environment.GetEnvironmentVariable("MINIO_ENDPOINT")
+    ?? throw new Exception("MINIO_ENDPOINT is missing.");
+
+string minioAccessKey =
+    Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY")
+    ?? throw new Exception("MINIO_ACCESS_KEY is missing.");
+
+string minioSecretKey =
+    Environment.GetEnvironmentVariable("MINIO_SECRET_KEY")
+    ?? throw new Exception("MINIO_SECRET_KEY is missing.");
+
+bool minioUseSsl =
+    bool.TryParse(
+        Environment.GetEnvironmentVariable("MINIO_USE_SSL"),
+        out var useSsl)
+        && useSsl;
+
+builder.Services.AddSingleton<IMinioClient>(_ =>
+    new MinioClient()
+        .WithEndpoint(minioEndpoint)
+        .WithCredentials(minioAccessKey, minioSecretKey)
+        .WithSSL(minioUseSsl)
+        .Build());
 // ==========================================
 // Dependency Injection
 // ==========================================
@@ -129,6 +161,7 @@ builder.Services.AddScoped<IOrderItemRepository, SQLOrderItemRepository>();
 builder.Services.AddScoped<IUserRepository, SQLUserRepository>();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
 builder.Services.AddScoped<IWalletRepository, SQLWalletRepository>();
+builder.Services.AddScoped<IFileStorageService, MinioFileStorageService>();
 
 // ==========================================
 // OpenAPI

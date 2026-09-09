@@ -27,78 +27,108 @@
 # =============================================================================
 
 services:
+
+  # ===========================================================================
+  # API
+  # ===========================================================================
+
   api:
     build: .
-    # Overridable so a second copy of this stack (e.g. a throwaway test project started with
-    # `docker compose -p something-else`) does not collide on a fixed container name.
+
     container_name: ${API_CONTAINER_NAME:-scopesky-api}
+
     restart: unless-stopped
 
-    # `required: false` means a missing .env does not abort `docker compose up`, so a fresh
-    # clone works. Values in .env win over the defaults defined below.
     env_file:
       - path: .env
         required: false
 
     ports:
-      # Host port is configurable so it can be changed per PC without touching source.
       - "${API_PORT:-5000}:8080"
-
-    volumes:
-      # Uploaded product/profile images survive rebuilds.
-      - wwwroot_data:/app/wwwroot
 
     depends_on:
       sqlserver:
         condition: service_healthy
 
+      minio:
+        condition: service_started
+
     environment:
+
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+
       ASPNETCORE_URLS: http://+:8080
 
       # ---------------------------------------------------------------------
       # Container-to-container database configuration
       # ---------------------------------------------------------------------
-      # Composed from parts here rather than taken verbatim from .env, so the API can never
-      # accidentally be pointed at `localhost` or at one specific PC's LAN IP. DB_HOST
-      # defaults to the compose service name and should normally be left alone.
-      DB_CONNECTION: "Server=${DB_HOST:-sqlserver},${DB_PORT:-1433};Database=${DB_NAME:-ScopeSkyCafeteriaDb};User Id=${DB_USER:-sa};Password=${MSSQL_SA_PASSWORD:-YourStrongPassword123!};TrustServerCertificate=True;Connect Timeout=60"
 
-      # Startup migration behaviour (see Data/DatabaseStartup.cs).
+      DB_CONNECTION: "Server=${DB_HOST:-sqlserver},${DB_PORT:-1433};Database=${DB_NAME:-SSCafeteriaDbContext};User Id=${DB_USER:-sa};Password=${MSSQL_SA_PASSWORD:-YourStrongPassword123!};TrustServerCertificate=True;MultipleActiveResultSets=True;Connect Timeout=60"
+
+      # Startup migration behaviour
+
       RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
+
       DB_MIGRATE_MAX_ATTEMPTS: ${DB_MIGRATE_MAX_ATTEMPTS:-12}
+
       DB_MIGRATE_RETRY_DELAY_SECONDS: ${DB_MIGRATE_RETRY_DELAY_SECONDS:-5}
 
       # ---------------------------------------------------------------------
       # Auth
       # ---------------------------------------------------------------------
+
       JWT_KEY: ${JWT_KEY:-HhAa19961968Mm2003AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoBbQqRrSsTtUuVvWwXxYyZz}
+
       JWT_ISSUER: ${JWT_ISSUER:-ScopeSkyCafeteria}
+
       JWT_AUDIENCE: ${JWT_AUDIENCE:-ScopeSkyCafeteriaUsers}
 
       # ---------------------------------------------------------------------
-      # LAN / client access configuration (CORS)
+      # LAN / client access configuration
       # ---------------------------------------------------------------------
-      # Comma-separated list of browser origins. The frontend normally talks to the API
-      # through the Vite proxy (same origin), so this only matters if a client calls the API
-      # directly. Add your LAN origin in .env, e.g.
-      #   FRONTEND_URL=http://localhost:5173,http://192.168.1.50:5173
+
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
 
       # ---------------------------------------------------------------------
       # Seeded accounts
       # ---------------------------------------------------------------------
+
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-SuperAdmin}
+
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-superadmin@test.com}
+
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-SuperAdmin@1996}
 
       ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@test.com}
+
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@1996}
 
+      # ---------------------------------------------------------------------
+      # MinIO
+      # ---------------------------------------------------------------------
+
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
+
+      MINIO_BUCKET: ${MINIO_BUCKET:-scopesky-products}
+
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+
+
+  # ===========================================================================
+  # SQL Server
+  # ===========================================================================
+
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-latest
+
     container_name: ${SQL_CONTAINER_NAME:-sqlserver}
+
     restart: unless-stopped
 
     env_file:
@@ -106,48 +136,52 @@ services:
         required: false
 
     environment:
+
       ACCEPT_EULA: "Y"
+
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-YourStrongPassword123!}
 
     ports:
-      # Bound to the host loopback by default so the SA account is not reachable from the
-      # LAN. Only the frontend/API ports need to be LAN-visible. Set SQL_BIND=0.0.0.0 in
-      # .env if you deliberately want to attach SSMS from another machine.
       - "${SQL_BIND:-127.0.0.1}:${SQL_HOST_PORT:-1433}:1433"
 
     volumes:
-      # Named volume: the database survives `docker compose down` and is upgraded in place by
-      # EF Core migrations on the next start. Only `docker compose down -v` destroys it.
       - sql_data:/var/opt/mssql
 
     healthcheck:
-      # The API waits for this to pass before it tries to migrate. `sqlcmd` is resolved from
-      # PATH with a fallback to the mssql-tools18 path so the check keeps working if the
-      # image layout changes.
       test:
         [
           "CMD-SHELL",
           'SQLCMD=$$(command -v sqlcmd || echo /opt/mssql-tools18/bin/sqlcmd); "$$SQLCMD" -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1',
         ]
+
       interval: 10s
+
       timeout: 5s
+
       retries: 30
+
       start_period: 60s
 
+
+  # ===========================================================================
+  # Frontend
+  # ===========================================================================
+
   frontend:
+
     build:
       context: ../../../Frontend
       target: development
+
     container_name: ${FRONTEND_CONTAINER_NAME:-scopesky-frontend}
+
     restart: unless-stopped
 
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
 
     environment:
-      # Docker service name for the API, so the Vite dev-server proxy works from inside the
-      # container regardless of the host's LAN IP. Other devices reach the app through the
-      # host's IP on ${FRONTEND_PORT} and the proxy forwards to the API over the Docker network.
+
       VITE_PROXY_TARGET: http://api:8080
 
     volumes:
@@ -157,6 +191,39 @@ services:
     depends_on:
       - api
 
+
+  # ===========================================================================
+  # MinIO
+  # ===========================================================================
+
+  minio:
+
+    image: minio/minio:latest
+
+    container_name: minio
+
+    command: server /data --console-address ":9001"
+
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+    environment:
+
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+    volumes:
+      - minio_data:/data
+
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
 volumes:
+
   sql_data:
-  wwwroot_data:
+
+  minio_data:
