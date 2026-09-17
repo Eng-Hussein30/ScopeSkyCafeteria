@@ -21,10 +21,6 @@ namespace ScopeSkyCafeteria.Repositories
         // SuperAdmin
         Task<Order?> DeleteOrderAsync(Guid id);
 
-        Task<List<Order>> GetPendingOrdersAsync();
-
-        Task<List<Order>> GetAcceptedOrdersAsync();
-
-        Task<List<Order>> GetReadyOrdersAsync();
+        Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status);
     }
 }

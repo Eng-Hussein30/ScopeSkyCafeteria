@@ -30,8 +30,8 @@ namespace ScopeSkyCafeteria.Mapping
             CreateMap<UpdateOrdersDTO, Order>();
 
             // OrderItem
-            CreateMap<OrderItem, OrderItemDTO>().ForMember(dest => dest.ProductName,
-                                                           opt => opt.MapFrom(src => src.Product.Name));
+            CreateMap<OrderItem, OrderItemDTO>()
+                .ForMember(dest => dest.ProductName,opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : null));
 
             CreateMap<AddOrderItemDTO, OrderItem>();
 

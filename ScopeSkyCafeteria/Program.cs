@@ -1,4 +1,5 @@
-﻿using DotNetEnv;
+﻿
+using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -101,7 +102,9 @@ builder.Services
 // AutoMapper
 // ==========================================
 
-builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
+builder.Services.AddAutoMapper(
+    cfg => { },
+    typeof(AutoMapperProfiles));
 
 // ==========================================
 // CORS
@@ -120,7 +123,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
 
 // ==========================================
 // MinIO
@@ -150,6 +152,7 @@ builder.Services.AddSingleton<IMinioClient>(_ =>
         .WithCredentials(minioAccessKey, minioSecretKey)
         .WithSSL(minioUseSsl)
         .Build());
+
 // ==========================================
 // Dependency Injection
 // ==========================================
@@ -172,22 +175,17 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // ==========================================
-// Development
+// OpenAPI + Scalar
 // ==========================================
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 // ==========================================
 // Middleware
 // ==========================================
 
 app.UseHttpsRedirection();
-
-app.UseStaticFiles();
 
 app.UseAuthentication();
 

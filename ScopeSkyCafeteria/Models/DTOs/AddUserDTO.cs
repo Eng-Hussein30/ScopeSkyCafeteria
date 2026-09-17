@@ -6,11 +6,10 @@ namespace ScopeSkyCafeteria.Models.DTOs
     {
         [Required]
         [StringLength(20, MinimumLength = 3)]
-        public string? FirstName { get; set; }
-
+        public string FirstName { get; set; } = string.Empty;
         [Required]
         [StringLength(20, MinimumLength = 3)]
-        public string? LastName { get; set; }
+        public string LastName { get; set; } = string.Empty;
 
         [Required]
         [StringLength(20, MinimumLength = 3)]

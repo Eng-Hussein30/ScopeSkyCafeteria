@@ -7,7 +7,5 @@ namespace ScopeSkyCafeteria.Repositories
         Task<OrderItem> CreateOrderItemAsync(OrderItem orderItem);
         Task<OrderItem?> GetOrderItemByIdAsync(Guid id);
         Task<List<OrderItem>> GetAllOrderItemsAsync();
-        Task<OrderItem?> UpdateOrderItemAsync(Guid id, OrderItem orderItem);
-        Task<OrderItem?> DeleteOrderItemAsync(Guid id);
     }
 }

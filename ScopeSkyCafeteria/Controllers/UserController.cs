@@ -189,8 +189,8 @@ namespace ScopeSkyCafeteria.Controllers
             return Ok(new LoginResponseDTO
             {
                 JwtToken = token,
-                UserName = user.UserName,
-                Email = user.Email,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
                 Roles = roles.ToList()
             });
         }
@@ -225,7 +225,7 @@ namespace ScopeSkyCafeteria.Controllers
             return Ok(new
             {
                 message = "The user has been deleted successfully",
-                UserName = deleteUser.UserName
+                UserName = deleteUser.UserName ?? string.Empty
             });
         }
 

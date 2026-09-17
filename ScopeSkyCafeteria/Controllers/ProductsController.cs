@@ -10,7 +10,8 @@ using ScopeSkyCafeteria.Services.Interfaces;
 namespace ScopeSkyCafeteria.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]    public class ProductsController : ControllerBase
+    [Route("api/[controller]")]
+    public class ProductsController : ControllerBase
     {
         private readonly IProductRepository productRepository;
         private readonly IMapper mapper;
@@ -160,13 +161,16 @@ namespace ScopeSkyCafeteria.Controllers
             if (product == null)
                 return NotFound("Product not found.");
 
+            // حفظ مسار الصورة القديمة قبل تحديث المنتج
+            var oldImagePath = product.ImageUrl;
+
             // حفظ الصورة الجديدة في MinIO
             var newImagePath =
                 await fileStorageService.SaveAsync(
                     uploadProductImageDTO.Image,
                     "products");
 
-            // تحديث مسار الصورة في قاعدة البيانات
+            // تحديث مسار الصورة الجديدة في قاعدة البيانات
             var updatedProduct =
                 await productRepository.UpdateProductImageAsync(
                     id,
@@ -174,15 +178,16 @@ namespace ScopeSkyCafeteria.Controllers
 
             if (updatedProduct == null)
             {
+                // إذا فشل تحديث قاعدة البيانات نحذف الصورة الجديدة
                 await fileStorageService.DeleteAsync(newImagePath);
 
                 return NotFound("Product not found.");
             }
 
-            if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+            // حذف الصورة القديمة فقط
+            if (!string.IsNullOrWhiteSpace(oldImagePath))
             {
-                await fileStorageService.DeleteAsync(
-                    product.ImageUrl);
+                await fileStorageService.DeleteAsync(oldImagePath);
             }
 
             return Ok(new
@@ -193,3 +198,4 @@ namespace ScopeSkyCafeteria.Controllers
         }
     }
 }
+

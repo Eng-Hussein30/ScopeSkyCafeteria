@@ -377,12 +377,7 @@ namespace ScopeSkyCafeteria.Repositories
 
         public async Task<List<Order>> GetAllOrdersAsync()
         {
-            return await dbContext.Orders
-                .Include(o => o.User)
-                .Include(o => o.Admin)
-                .Include(o => o.OrderItems)
-                    .ThenInclude(oi => oi.Product)
-                .ToListAsync();
+            return await GetOrdersQuery().ToListAsync();
         }
 
         // =====================================================
@@ -391,58 +386,25 @@ namespace ScopeSkyCafeteria.Repositories
 
         public async Task<List<Order>> GetOrdersByUserIdAsync(Guid userId)
         {
-            return await dbContext.Orders
-                .Include(o => o.User)
-                .Include(o => o.Admin)
-                .Include(o => o.OrderItems)
-                    .ThenInclude(oi => oi.Product)
+            return await GetOrdersQuery()
                 .Where(o => o.UserId == userId)
                 .ToListAsync();
         }
 
-        // =====================================================
-        // Get Pending Orders
-        // =====================================================
-
-        public async Task<List<Order>> GetPendingOrdersAsync()
+        public async Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status)
         {
-            return await dbContext.Orders
-                .Include(o => o.User)
-                .Include(o => o.Admin)
-                .Include(o => o.OrderItems)
-                    .ThenInclude(i => i.Product)
-                .Where(o => o.Status == OrderStatus.Pending)
+            return await GetOrdersQuery()
+                .Where(o => o.Status == status)
                 .ToListAsync();
         }
 
-        // =====================================================
-        // Get Accepted Orders
-        // =====================================================
-
-        public async Task<List<Order>> GetAcceptedOrdersAsync()
+        private IQueryable<Order> GetOrdersQuery()
         {
-            return await dbContext.Orders
+            return dbContext.Orders
                 .Include(o => o.User)
                 .Include(o => o.Admin)
                 .Include(o => o.OrderItems)
-                    .ThenInclude(i => i.Product)
-                .Where(o => o.Status == OrderStatus.Accepted)
-                .ToListAsync();
-        }
-
-        // =====================================================
-        // Get Ready Orders
-        // =====================================================
-
-        public async Task<List<Order>> GetReadyOrdersAsync()
-        {
-            return await dbContext.Orders
-                .Include(o => o.User)
-                .Include(o => o.Admin)
-                .Include(o => o.OrderItems)
-                    .ThenInclude(i => i.Product)
-                .Where(o => o.Status == OrderStatus.Ready)
-                .ToListAsync();
+                    .ThenInclude(i => i.Product);
         }
     }
 } 

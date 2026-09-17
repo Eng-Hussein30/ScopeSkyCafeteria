@@ -4,8 +4,8 @@ namespace ScopeSkyCafeteria.Models.Domain
 {
     public class User : IdentityUser<Guid>
     {
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public ICollection<Order> CustomerOrders { get; set; } = new List<Order>();

@@ -29,8 +29,7 @@ namespace ScopeSkyCafeteria.Controllers
 
         [HttpPost]
         [Authorize(Roles = Roles.User)]
-        public async Task<IActionResult> CreateOrder(
-            [FromBody] AddOrdersDTO addOrdersDTO)
+        public async Task<IActionResult> CreateOrder([FromBody] AddOrdersDTO addOrdersDTO)
         {
             if (!ModelState.IsValid)
             {
@@ -256,7 +255,7 @@ namespace ScopeSkyCafeteria.Controllers
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
         public async Task<IActionResult> GetPendingOrders()
         {
-            var orders = await orderRepository.GetPendingOrdersAsync();
+            var orders = await orderRepository.GetOrdersByStatusAsync(OrderStatus.Pending);
 
             return Ok(mapper.Map<List<OrdersDTO>>(orders));
         }
@@ -269,7 +268,7 @@ namespace ScopeSkyCafeteria.Controllers
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
         public async Task<IActionResult> GetAcceptedOrders()
         {
-            var orders = await orderRepository.GetAcceptedOrdersAsync();
+            var orders = await orderRepository.GetOrdersByStatusAsync(OrderStatus.Accepted);
 
             return Ok(mapper.Map<List<OrdersDTO>>(orders));
         }
@@ -282,7 +281,7 @@ namespace ScopeSkyCafeteria.Controllers
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
         public async Task<IActionResult> GetReadyOrders()
         {
-            var orders = await orderRepository.GetReadyOrdersAsync();
+            var orders = await orderRepository.GetOrdersByStatusAsync(OrderStatus.Ready);
 
             return Ok(mapper.Map<List<OrdersDTO>>(orders));
         }
