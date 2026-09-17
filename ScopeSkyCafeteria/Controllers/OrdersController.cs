@@ -6,6 +6,7 @@ using ScopeSkyCafeteria.Models.Domain;
 using ScopeSkyCafeteria.Models.DTOs;
 using ScopeSkyCafeteria.Repositories;
 using System.Security.Claims;
+using ScopeSkyCafeteria.Services.Interfaces;
 
 namespace ScopeSkyCafeteria.Controllers
 {
@@ -16,11 +17,15 @@ namespace ScopeSkyCafeteria.Controllers
     {
         private readonly IOrderRepository orderRepository;
         private readonly IMapper mapper;
+        private readonly ITelegramNotificationService telegramNotificationService;
+        private readonly IUserRepository userRepository;
 
-        public OrdersController(IOrderRepository orderRepository, IMapper mapper)
+        public OrdersController(IOrderRepository orderRepository, IMapper mapper, ITelegramNotificationService telegramNotificationService, IUserRepository userRepository)
         {
             this.orderRepository = orderRepository;
             this.mapper = mapper;
+            this.telegramNotificationService = telegramNotificationService;
+            this.userRepository = userRepository;
         }
 
         // =====================================
@@ -31,6 +36,7 @@ namespace ScopeSkyCafeteria.Controllers
         [Authorize(Roles = Roles.User)]
         public async Task<IActionResult> CreateOrder([FromBody] AddOrdersDTO addOrdersDTO)
         {
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -66,6 +72,35 @@ namespace ScopeSkyCafeteria.Controllers
 
                 var orderResult =
                     await orderRepository.CreateOrderAsync(orderDomain);
+                var user = await userRepository.GetUserByIdAsync(userId);
+
+                if (user != null)
+                {
+                    var customerName = $"{user.FirstName} {user.LastName}".Trim();
+
+                    var paymentMethod =
+                        orderResult.Order.PaymentMethod == PaymentMethod.Wallet
+                            ? "Wallet"
+                            : "Cash";
+
+                    var items = orderResult.Order.OrderItems
+                        .Select(item => (
+                            ProductName: item.Product?.Name ?? string.Empty,
+                            Quantity: item.Quantity,
+                            UnitPrice: item.Price
+                        ))
+                        .ToList();
+
+                    await telegramNotificationService.SendNewOrderNotificationAsync(
+                        orderResult.Order.Id,
+                        customerName,
+                        user.PhoneNumber,
+                        orderResult.Order.TotalPrice,
+                        paymentMethod,
+                        orderResult.PaidFromWallet,
+                        orderResult.AddedToDebt,
+                        items);
+                }
 
                 // =====================================================
                 // Response

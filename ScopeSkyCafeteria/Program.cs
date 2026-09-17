@@ -1,5 +1,4 @@
-﻿
-using DotNetEnv;
+﻿using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -165,6 +164,7 @@ builder.Services.AddScoped<IUserRepository, SQLUserRepository>();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
 builder.Services.AddScoped<IWalletRepository, SQLWalletRepository>();
 builder.Services.AddScoped<IFileStorageService, MinioFileStorageService>();
+builder.Services.AddHttpClient<ITelegramNotificationService, TelegramNotificationService>();
 
 // ==========================================
 // OpenAPI
