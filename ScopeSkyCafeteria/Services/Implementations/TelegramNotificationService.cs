@@ -21,6 +21,7 @@ public class TelegramNotificationService : ITelegramNotificationService
 
     public async Task SendNewOrderNotificationAsync(
         Guid orderId,
+        int orderNumber,
         string customerName,
         string? customerPhone,
         decimal totalPrice,
@@ -50,8 +51,25 @@ public class TelegramNotificationService : ITelegramNotificationService
                 return;
             }
 
+            // رابط الواجهة الأمامية
+            var frontendBaseUrl = configuration["FRONTEND_BASE_URL"];
+
+            if (string.IsNullOrWhiteSpace(frontendBaseUrl))
+            {
+                logger.LogWarning(
+                    "Telegram notification skipped because FRONTEND_BASE_URL is missing.");
+
+                return;
+            }
+
+            frontendBaseUrl = frontendBaseUrl.TrimEnd('/');
+
+            // رابط صفحة الطلب في الـ Frontend
+            // الـ GUID موجود داخل الرابط فقط ولن يظهر في رسالة Telegram
+            var orderUrl = $"{frontendBaseUrl}/admin/orders/{orderId}";
+
             var message = BuildOrderMessage(
-                orderId,
+                orderNumber,
                 customerName,
                 customerPhone,
                 totalPrice,
@@ -66,7 +84,23 @@ public class TelegramNotificationService : ITelegramNotificationService
             var request = new
             {
                 chat_id = chatId,
-                text = message
+                text = message,
+
+                // زر فتح الطلب
+                reply_markup = new
+                {
+                    inline_keyboard = new[]
+                    {
+                        new[]
+                        {
+                            new
+                            {
+                                text = "🔗 فتح الطلب",
+                                url = orderUrl
+                            }
+                        }
+                    }
+                }
             };
 
             var response =
@@ -100,7 +134,7 @@ public class TelegramNotificationService : ITelegramNotificationService
     }
 
     private static string BuildOrderMessage(
-        Guid orderId,
+        int orderNumber,
         string customerName,
         string? customerPhone,
         decimal totalPrice,
@@ -147,7 +181,7 @@ public class TelegramNotificationService : ITelegramNotificationService
 
             
             📦 الحالة: Pending
-            🆔 رقم الطلب: {orderId}
+            🔢 رقم الطلب: {orderNumber}
             """;
 
         return message;

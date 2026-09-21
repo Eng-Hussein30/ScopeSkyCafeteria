@@ -3,7 +3,7 @@
     public class Order
     {
         public Guid Id { get; set; }
-
+        public int OrderNumber { get; set; }
         // صاحب الطلب
         public Guid UserId { get; set; }
         public User User { get; set; } = null!;

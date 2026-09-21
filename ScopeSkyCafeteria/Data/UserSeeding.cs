@@ -18,6 +18,7 @@ namespace ScopeSkyCafeteria.Data
             var superAdminUserName = Env.GetString("SUPERADMIN_USERNAME");
             var superAdminEmail = Env.GetString("SUPERADMIN_EMAIL");
             var superAdminPassword = Env.GetString("SUPERADMIN_PASSWORD");
+            var superAdminPhone = Env.GetString("SUPERADMIN_PHONE");
 
             var superAdmin = await userManager.FindByNameAsync(superAdminUserName);
 
@@ -29,7 +30,9 @@ namespace ScopeSkyCafeteria.Data
                     LastName = "Admin",
                     UserName = superAdminUserName,
                     Email = superAdminEmail,
-                    EmailConfirmed = true
+                    PhoneNumber = superAdminPhone,
+                    EmailConfirmed = true,
+                    PhoneNumberConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(
@@ -46,6 +49,16 @@ namespace ScopeSkyCafeteria.Data
                         dbContext,
                         superAdmin);
                 }
+                else
+                {
+                    var errors = string.Join(
+                        " | ",
+                        result.Errors.Select(e =>
+                            $"{e.Code}: {e.Description}"));
+
+                    throw new Exception(
+                        $"Failed to create SuperAdmin: {errors}");
+                }
             }
             else
             {
@@ -60,6 +73,7 @@ namespace ScopeSkyCafeteria.Data
             var adminUserName = Env.GetString("ADMIN_USERNAME");
             var adminEmail = Env.GetString("ADMIN_EMAIL");
             var adminPassword = Env.GetString("ADMIN_PASSWORD");
+            var adminPhone = Env.GetString("ADMIN_PHONE");
 
             var admin = await userManager.FindByNameAsync(adminUserName);
 
@@ -71,7 +85,9 @@ namespace ScopeSkyCafeteria.Data
                     LastName = "Admin",
                     UserName = adminUserName,
                     Email = adminEmail,
-                    EmailConfirmed = true
+                    PhoneNumber = adminPhone,
+                    EmailConfirmed = true,
+                    PhoneNumberConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(
@@ -88,6 +104,16 @@ namespace ScopeSkyCafeteria.Data
                         dbContext,
                         admin);
                 }
+                else
+                {
+                    var errors = string.Join(
+                        " | ",
+                        result.Errors.Select(e =>
+                            $"{e.Code}: {e.Description}"));
+
+                    throw new Exception(
+                        $"Failed to create Admin: {errors}");
+                }
             }
             else
             {
@@ -102,6 +128,7 @@ namespace ScopeSkyCafeteria.Data
             var normalUserName = Env.GetString("USER_USERNAME");
             var normalUserEmail = Env.GetString("USER_EMAIL");
             var normalUserPassword = Env.GetString("USER_PASSWORD");
+            var normalUserPhone = Env.GetString("USER_PHONE");
 
             var user = await userManager.FindByNameAsync(normalUserName);
 
@@ -113,7 +140,9 @@ namespace ScopeSkyCafeteria.Data
                     LastName = "User",
                     UserName = normalUserName,
                     Email = normalUserEmail,
-                    EmailConfirmed = true
+                    PhoneNumber = normalUserPhone,
+                    EmailConfirmed = true,
+                    PhoneNumberConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(
@@ -129,6 +158,16 @@ namespace ScopeSkyCafeteria.Data
                     await CreateWalletAsync(
                         dbContext,
                         user);
+                }
+                else
+                {
+                    var errors = string.Join(
+                        " | ",
+                        result.Errors.Select(e =>
+                            $"{e.Code}: {e.Description}"));
+
+                    throw new Exception(
+                        $"Failed to create User: {errors}");
                 }
             }
             else

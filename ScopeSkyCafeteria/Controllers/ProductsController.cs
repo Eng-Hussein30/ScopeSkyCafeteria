@@ -29,20 +29,47 @@ namespace ScopeSkyCafeteria.Controllers
 
         [HttpPost]
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
-        public async Task<IActionResult> CreateProduct(
-            [FromBody] CreateProductDto createProductDto)
+        public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createProductDto)
         {
-            var productDomain = mapper.Map<Product>(createProductDto);
+            var name = createProductDto.Name?.Trim();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest(new
+                {
+                    message = "Product name is required."
+                });
+            }
+
+            var exists =
+                await productRepository.ProductNameExistsAsync(name);
+
+            if (exists)
+            {
+                return Conflict(new
+                {
+                    message = "A product with this name already exists."
+                });
+            }
+
+            createProductDto.Name = name;
+
+            var productDomain =
+                mapper.Map<Product>(createProductDto);
 
             await productRepository.CreateProductAsync(productDomain);
 
-            return Ok(mapper.Map<ProductDto>(productDomain));
+            return Ok(new
+            {
+                message = "Product created successfully.",
+                data = mapper.Map<ProductDto>(productDomain)
+            });
         }
 
+
+
         [HttpGet]
-        public async Task<IActionResult> GetAllProducts(
-            [FromQuery] Guid? categoryId,
-            [FromQuery] string? search)
+        public async Task<IActionResult> GetAllProducts([FromQuery] Guid? categoryId,[FromQuery] string? search)
         {
             var products =
                 await productRepository.GetAllProductsAsync(categoryId, search);
@@ -65,43 +92,79 @@ namespace ScopeSkyCafeteria.Controllers
             return Ok(productDto);
         }
 
+
+
         [HttpPut("{id:guid}")]
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
-        public async Task<IActionResult> UpdateProduct(
-            [FromRoute] Guid id,
-            [FromBody] UpdateProductsDTO updateProductsDTO)
+        public async Task<IActionResult> UpdateProduct([FromRoute] Guid id,[FromBody] UpdateProductsDTO updateProductsDTO)
         {
+            var name = updateProductsDTO.Name?.Trim();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest(new
+                {
+                    message = "Product name is required."
+                });
+            }
+
+            var exists =
+                await productRepository.ProductNameExistsAsync(
+                    name,
+                    id);
+
+            if (exists)
+            {
+                return Conflict(new
+                {
+                    message = "A product with this name already exists."
+                });
+            }
+
+            updateProductsDTO.Name = name;
+
             var productDomain =
                 mapper.Map<Product>(updateProductsDTO);
 
             var updatedProduct =
-                await productRepository.UpdateProductAsync(id, productDomain);
+                await productRepository.UpdateProductAsync(
+                    id,
+                    productDomain);
 
             if (updatedProduct == null)
-                return NotFound("Product not found");
+            {
+                return NotFound(new
+                {
+                    message = "Product not found."
+                });
+            }
 
-            var productDto =
-                mapper.Map<ProductDto>(updatedProduct);
-
-            return Ok(productDto);
+            return Ok(new
+            {
+                message = "Product updated successfully.",
+                data = mapper.Map<ProductDto>(updatedProduct)
+            });
         }
 
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
-        public async Task<IActionResult> DeleteProduct(
-            [FromRoute] Guid id)
+        public async Task<IActionResult> DeleteProduct([FromRoute] Guid id)
         {
             var deletedProduct =
                 await productRepository.DeleteProductAsync(id);
 
             if (deletedProduct == null)
+            {
                 return NotFound("Product not found");
+            }
 
-            var productDto =
-                mapper.Map<ProductDto>(deletedProduct);
-
-            return Ok(productDto);
+            return Ok(new
+            {
+                message = "Product deleted successfully.",
+                data = mapper.Map<ProductDto>(deletedProduct)
+            });
         }
+
 
         [HttpPost("{id:guid}/upload-image")]
         [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
@@ -166,15 +229,11 @@ namespace ScopeSkyCafeteria.Controllers
 
             // حفظ الصورة الجديدة في MinIO
             var newImagePath =
-                await fileStorageService.SaveAsync(
-                    uploadProductImageDTO.Image,
-                    "products");
+                await fileStorageService.SaveAsync(uploadProductImageDTO.Image,"products");
 
             // تحديث مسار الصورة الجديدة في قاعدة البيانات
             var updatedProduct =
-                await productRepository.UpdateProductImageAsync(
-                    id,
-                    newImagePath);
+                await productRepository.UpdateProductImageAsync(id,newImagePath);
 
             if (updatedProduct == null)
             {

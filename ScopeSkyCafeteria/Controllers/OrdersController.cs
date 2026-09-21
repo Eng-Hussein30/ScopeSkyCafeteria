@@ -93,6 +93,7 @@ namespace ScopeSkyCafeteria.Controllers
 
                     await telegramNotificationService.SendNewOrderNotificationAsync(
                         orderResult.Order.Id,
+                        orderResult.Order.OrderNumber,
                         customerName,
                         user.PhoneNumber,
                         orderResult.Order.TotalPrice,

@@ -89,5 +89,20 @@ namespace ScopeSkyCafeteria.Repositories
 
             return product;
         }
+
+        public async Task<bool> ProductNameExistsAsync(string name,Guid? excludeId = null)
+        {
+            var normalizedName = name.Trim().ToLower();
+
+            var query = dbContext.Products
+                .Where(x => x.Name.Trim().ToLower() == normalizedName);
+
+            if (excludeId.HasValue)
+            {
+                query = query.Where(x => x.Id != excludeId.Value);
+            }
+
+            return await query.AnyAsync();
+        }
     }
 }

@@ -5,12 +5,9 @@ using ScopeSkyCafeteria.Models.Domain;
 
 namespace ScopeSkyCafeteria.Data
 {
-    public class SSCafeteriaDbContext
-        : IdentityDbContext<User, IdentityRole<Guid>, Guid>
+    public class SSCafeteriaDbContext: IdentityDbContext<User, IdentityRole<Guid>, Guid>
     {
-        public SSCafeteriaDbContext(
-            DbContextOptions<SSCafeteriaDbContext> options)
-            : base(options)
+        public SSCafeteriaDbContext(DbContextOptions<SSCafeteriaDbContext> options): base(options)
         {
         }
 
@@ -30,6 +27,16 @@ namespace ScopeSkyCafeteria.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.HasSequence<int>("OrderNumberSequence").StartsAt(1).IncrementsBy(1);
+
+            builder.Entity<Order>()
+                .Property(o => o.OrderNumber)
+                .HasDefaultValueSql("NEXT VALUE FOR OrderNumberSequence");
+
+            builder.Entity<Order>()
+                .HasIndex(o => o.OrderNumber)
+                .IsUnique();
 
 
             // =====================================================
