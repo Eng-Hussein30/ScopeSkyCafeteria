@@ -26,11 +26,10 @@ string dbConnection =
     ?? throw new Exception("DB_CONNECTION is missing.");
 
 builder.Services.AddDbContext<SSCafeteriaDbContext>(options =>
-    options.UseSqlServer(
+    options.UseNpgsql(
         dbConnection,
-        sqlOptions => sqlOptions.EnableRetryOnFailure()
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()
     ));
-
 // ==========================================
 // Identity
 // ==========================================

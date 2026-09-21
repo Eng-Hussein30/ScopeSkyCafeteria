@@ -32,7 +32,7 @@ namespace ScopeSkyCafeteria.Data
 
             builder.Entity<Order>()
                 .Property(o => o.OrderNumber)
-                .HasDefaultValueSql("NEXT VALUE FOR OrderNumberSequence");
+                .HasDefaultValueSql("nextval('\"OrderNumberSequence\"')");
 
             builder.Entity<Order>()
                 .HasIndex(o => o.OrderNumber)

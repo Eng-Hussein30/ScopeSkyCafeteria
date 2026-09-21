@@ -1,198 +1,93 @@
-﻿# =============================================================================
-# ScopeSky Cafeteria â€” API + Frontend + MinIO
-# =============================================================================
-#
-# Database:
-#   The API connects to the existing SQL Server running on Windows.
-#
-#   Docker API
-#       |
-#       +----> host.docker.internal:1433
-#                  |
-#                  +----> Windows SQL Server
-#                            |
-#                            +----> SSCafeteriaDbContext
-#
-# Storage:
-#   Docker API
-#       |
-#       +----> minio:9000
-#                  |
-#                  +----> scopesky-products
-#
-# =============================================================================
-
-services:
-
-  # ===========================================================================
-  # API
-  # ===========================================================================
+﻿services:
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-    container_name: ${API_CONTAINER_NAME:-scopesky-api}
-
+    container_name: scopesky-api
     restart: unless-stopped
 
     env_file:
       - path: .env
         required: false
 
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+
+      DB_CONNECTION: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-ScopeSkyCafeteriaDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-ChangeThisPostgresPassword!}"
+
+      RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
+      DB_MIGRATE_MAX_ATTEMPTS: ${DB_MIGRATE_MAX_ATTEMPTS:-12}
+      DB_MIGRATE_RETRY_DELAY_SECONDS: ${DB_MIGRATE_RETRY_DELAY_SECONDS:-5}
+
+      JWT_KEY: "${JWT_KEY:-YourSuperSecretJwtKeyThatIsAtLeast32CharactersLong!}"
+      JWT_ISSUER: "${JWT_ISSUER:-ScopeSkyCafeteria}"
+      JWT_AUDIENCE: "${JWT_AUDIENCE:-ScopeSkyCafeteriaUsers}"
+
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:5173}"
+
+      SUPERADMIN_USERNAME: "${SUPERADMIN_USERNAME:-superadmin}"
+      SUPERADMIN_EMAIL: "${SUPERADMIN_EMAIL:-superadmin@example.com}"
+      SUPERADMIN_PASSWORD: "${SUPERADMIN_PASSWORD:-YourStrongPassword123!}"
+
+      ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@example.com}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-YourStrongPassword123!}"
+
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin123}"
+      MINIO_BUCKET: "${MINIO_BUCKET:-scopesky-products}"
+      MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
+
     ports:
       - "${API_PORT:-5000}:8080"
 
     depends_on:
+      postgres:
+        condition: service_started
       minio:
         condition: service_started
 
-    environment:
 
-      # ---------------------------------------------------------------------
-      # ASP.NET Core
-      # ---------------------------------------------------------------------
-
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-
-      ASPNETCORE_URLS: http://+:8080
-
-
-      # ---------------------------------------------------------------------
-      # Windows SQL Server
-      # ---------------------------------------------------------------------
-      #
-      # host.docker.internal points from the Docker container to the
-      # Windows host machine.
-      #
-      # SQL Server is NOT running inside Docker.
-      #
-      # ---------------------------------------------------------------------
-
-      DB_CONNECTION: "Server=host.docker.internal,1433;Database=SSCafeteriaDbContext;User Id=ScopeSkyApi;Password=12332111@12332111;TrustServerCertificate=True;MultipleActiveResultSets=True;Connect Timeout=60"
-
-
-      # ---------------------------------------------------------------------
-      # Database migration behaviour
-      # ---------------------------------------------------------------------
-
-      RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
-
-      DB_MIGRATE_MAX_ATTEMPTS: ${DB_MIGRATE_MAX_ATTEMPTS:-12}
-
-      DB_MIGRATE_RETRY_DELAY_SECONDS: ${DB_MIGRATE_RETRY_DELAY_SECONDS:-5}
-
-
-      # ---------------------------------------------------------------------
-      # JWT Authentication
-      # ---------------------------------------------------------------------
-
-      JWT_KEY: ${JWT_KEY:-HhAa19961968Mm2003AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoBbQqRrSsTtUuVvWwXxYyZz}
-
-      JWT_ISSUER: ${JWT_ISSUER:-ScopeSkyCafeteria}
-
-      JWT_AUDIENCE: ${JWT_AUDIENCE:-ScopeSkyCafeteriaUsers}
-
-
-      # ---------------------------------------------------------------------
-      # Frontend / CORS
-      # ---------------------------------------------------------------------
-
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-
-
-      # ---------------------------------------------------------------------
-      # Seeded accounts
-      # ---------------------------------------------------------------------
-
-      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-SuperAdmin}
-
-      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-superadmin@test.com}
-
-      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-SuperAdmin@1996}
-
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
-
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@test.com}
-
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@1996}
-
-
-      # ---------------------------------------------------------------------
-      # MinIO
-      # ---------------------------------------------------------------------
-
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
-
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
-
-      MINIO_BUCKET: ${MINIO_BUCKET:-scopesky-products}
-
-      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
-
-
-  # ===========================================================================
-  # Frontend
-  # ===========================================================================
-
-  frontend:
-
-    build:
-      context: ../../../Frontend
-      target: development
-
-    container_name: ${FRONTEND_CONTAINER_NAME:-scopesky-frontend}
-
+  postgres:
+    image: postgres:18
+    container_name: scopesky-postgres
     restart: unless-stopped
 
-    ports:
-      - "${FRONTEND_PORT:-5173}:5173"
-
     environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ScopeSkyCafeteriaDb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisPostgresPassword!}
 
-      VITE_PROXY_TARGET: http://api:8080
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
 
     volumes:
-      - ../../../Frontend:/app
-      - /app/node_modules
+      - postgres_data:/var/lib/postgresql
 
-    depends_on:
-      - api
-
-
-  # ===========================================================================
-  # MinIO
-  # ===========================================================================
 
   minio:
-
     image: minio/minio:latest
-
     container_name: minio
+    restart: unless-stopped
 
     command: server /data --console-address ":9001"
 
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-
     environment:
-
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
 
     volumes:
       - minio_data:/data
 
 
-# =============================================================================
-# Volumes
-# =============================================================================
-
 volumes:
-
+  postgres_data:
   minio_data:
-
-

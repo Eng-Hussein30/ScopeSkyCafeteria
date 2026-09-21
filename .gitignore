@@ -3,3 +3,5 @@ obj/
 .vs/
 .env
 *.user
+# SQL Server migration backup
+Migrations-SQLServer-Backup/
