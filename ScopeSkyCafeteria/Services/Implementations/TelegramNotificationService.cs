@@ -198,6 +198,80 @@ public TelegramNotificationService(
         }
     }
 
+    public async Task SendOrderDeliveredToAdminNotificationAsync(
+    int orderNumber,
+    string customerName,
+    string? departmentName)
+    {
+        try
+        {
+            var token = configuration["TELEGRAM_BOT_TOKEN"];
+            var chatId = configuration["TELEGRAM_ADMIN_CHAT_ID"];
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                logger.LogWarning(
+                    "Telegram delivery notification skipped because TELEGRAM_BOT_TOKEN is missing.");
+
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(chatId))
+            {
+                logger.LogWarning(
+                    "Telegram delivery notification skipped because TELEGRAM_ADMIN_CHAT_ID is missing.");
+
+                return;
+            }
+
+            var message = $"""
+                       🎉 تم تسليم الطلب بنجاح
+
+                       🔢 رقم الطلب: {orderNumber}
+                       👤 المستخدم: {customerName}
+                       🏢 القسم: {departmentName ?? "غير محدد"}
+
+                       تم تسليم الطلب للمستخدم بهذا القسم بنجاح.
+                       """;
+
+            var url =
+                $"https://api.telegram.org/bot{token}/sendMessage";
+
+            var request = new
+            {
+                chat_id = chatId,
+                text = message
+            };
+
+            var response =
+                await httpClient.PostAsJsonAsync(url, request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error =
+                    await response.Content.ReadAsStringAsync();
+
+                logger.LogWarning(
+                    "Telegram admin delivery notification failed. StatusCode: {StatusCode}, Response: {Response}",
+                    response.StatusCode,
+                    error);
+
+                return;
+            }
+
+            logger.LogInformation(
+                "Telegram admin delivery notification sent for order {OrderNumber}.",
+                orderNumber);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to send Telegram admin delivery notification for order {OrderNumber}.",
+                orderNumber);
+        }
+    }
+
     private static string BuildOrderMessage(
         int orderNumber,
         string customerName,

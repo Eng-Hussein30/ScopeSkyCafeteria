@@ -475,6 +475,16 @@ namespace ScopeSkyCafeteria.Controllers
                             order.Status);
                 }
 
+                var customerName =
+                    user == null
+                        ? "غير معروف"
+                        : $"{user.FirstName} {user.LastName}".Trim();
+
+                await telegramNotificationService
+                    .SendOrderDeliveredToAdminNotificationAsync(
+                        order.OrderNumber,
+                        customerName,
+                        order.DepartmentName ?? user?.DepartmentName);
                 return Ok(new
                 {
                     Message =

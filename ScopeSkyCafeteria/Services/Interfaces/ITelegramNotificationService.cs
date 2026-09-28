@@ -4,7 +4,8 @@ namespace ScopeSkyCafeteria.Services.Interfaces;
 
 public interface ITelegramNotificationService
 {
-    Task SendNewOrderNotificationAsync(Guid orderId,
+    Task SendNewOrderNotificationAsync(
+        Guid orderId,
         int orderNumber,
         string customerName,
         string? customerPhone,
@@ -15,5 +16,13 @@ public interface ITelegramNotificationService
         decimal addedToDebt,
         IEnumerable<(string ProductName, int Quantity, decimal UnitPrice)> items);
 
-    Task SendOrderStatusNotificationAsync(long telegramChatId,int orderNumber,OrderStatus status);
+    Task SendOrderStatusNotificationAsync(
+        long telegramChatId,
+        int orderNumber,
+        OrderStatus status);
+
+    Task SendOrderDeliveredToAdminNotificationAsync(
+        int orderNumber,
+        string customerName,
+        string? departmentName);
 }
