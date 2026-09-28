@@ -142,7 +142,8 @@ namespace ScopeSkyCafeteria.Data
                     Email = normalUserEmail,
                     PhoneNumber = normalUserPhone,
                     EmailConfirmed = true,
-                    PhoneNumberConfirmed = true
+                    PhoneNumberConfirmed = true,
+                    DepartmentName = "PR"
                 };
 
                 var result = await userManager.CreateAsync(

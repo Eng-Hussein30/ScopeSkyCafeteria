@@ -4,7 +4,6 @@ using ScopeSkyCafeteria.DTOs;
 using ScopeSkyCafeteria.Models.Domain;
 using ScopeSkyCafeteria.Models.DTOs;
 
-
 namespace ScopeSkyCafeteria.Repositories
 {
     public class SQLOrderRepository : IOrderRepository
@@ -351,6 +350,37 @@ namespace ScopeSkyCafeteria.Repositories
         }
 
         // =====================================================
+        // Deliver Order
+        // =====================================================
+
+        public async Task<Order?> DeliverOrderAsync(
+            Guid orderId,
+            Guid adminId)
+        {
+            var order = await dbContext.Orders
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+            {
+                return null;
+            }
+
+            if (order.Status != OrderStatus.OnTheWay)
+            {
+                throw new InvalidOperationException(
+                    "Only orders that are on the way can be delivered.");
+            }
+
+            order.DeliveredByAdminId = adminId;
+            order.DeliveredAt = DateTime.UtcNow;
+            order.Status = OrderStatus.Delivered;
+
+            await dbContext.SaveChangesAsync();
+
+            return order;
+        }
+
+        // =====================================================
         // Delete Order
         // =====================================================
 
@@ -391,20 +421,57 @@ namespace ScopeSkyCafeteria.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status)
+        // =====================================================
+        // Get Orders By Status
+        // =====================================================
+
+        public async Task<List<Order>> GetOrdersByStatusAsync(
+            OrderStatus status)
         {
             return await GetOrdersQuery()
                 .Where(o => o.Status == status)
                 .ToListAsync();
         }
 
+        // =====================================================
+        // Get Orders Query
+        // =====================================================
+
         private IQueryable<Order> GetOrdersQuery()
         {
             return dbContext.Orders
                 .Include(o => o.User)
                 .Include(o => o.Admin)
+                .Include(o => o.DeliveredByAdmin)
                 .Include(o => o.OrderItems)
                     .ThenInclude(i => i.Product);
         }
+
+        // =====================================================
+        // On The Way Order
+        // =====================================================
+
+        public async Task<Order?> OnTheWayOrderAsync(Guid orderId)
+        {
+            var order = await dbContext.Orders
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+            {
+                return null;
+            }
+
+            if (order.Status != OrderStatus.Ready)
+            {
+                throw new InvalidOperationException(
+                    "Only ready orders can be marked as on the way.");
+            }
+
+            order.Status = OrderStatus.OnTheWay;
+
+            await dbContext.SaveChangesAsync();
+
+            return order;
+        }
     }
-} 
+}

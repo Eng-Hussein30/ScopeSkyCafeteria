@@ -14,9 +14,13 @@ namespace ScopeSkyCafeteria.Repositories
         // Admin & SuperAdmin
         Task<List<Order>> GetAllOrdersAsync();
 
-        Task<Order?> AcceptOrderAsync(Guid orderId, Guid adminId);
+        Task<Order?> AcceptOrderAsync(Guid orderId,Guid adminId);
 
         Task<Order?> ReadyOrderAsync(Guid orderId);
+
+        Task<Order?> OnTheWayOrderAsync(Guid orderId);
+
+        Task<Order?> DeliverOrderAsync(Guid orderId,Guid adminId);
 
         // SuperAdmin
         Task<Order?> DeleteOrderAsync(Guid id);

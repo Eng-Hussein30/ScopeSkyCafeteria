@@ -62,6 +62,17 @@ namespace ScopeSkyCafeteria.Data
 
 
             // =====================================================
+            // Admin -> Delivered Orders
+            // =====================================================
+
+            builder.Entity<Order>()
+                .HasOne(o => o.DeliveredByAdmin)
+                .WithMany()
+                .HasForeignKey(o => o.DeliveredByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =====================================================
             // Category -> Products
             // =====================================================
 

@@ -41,12 +41,65 @@ namespace ScopeSkyCafeteria.Controllers
         [HttpPost]
         [Route("User")]
         [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
-        public async Task<IActionResult> CreateUser(
-            [FromBody] AddUserDTO addUserDTO)
+        public async Task<IActionResult> CreateUser([FromBody] AddUserDTO addUserDTO)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+          // ==========================================
+          // Determine Role
+          // ==========================================
+
+var role = string.IsNullOrWhiteSpace(addUserDTO.Role)
+    ? Roles.User
+    : addUserDTO.Role.Trim();
+
+            // ==========================================
+            // Validate Role
+            // ==========================================
+
+            if (role != Roles.User &&
+                role != Roles.Admin &&
+                role != Roles.SuperAdmin)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid role."
+                });
+            }
+
+            // ==========================================
+            // Admin cannot create SuperAdmin
+            // IMPORTANT:
+            // This check MUST happen before CreateAsync
+            // ==========================================
+
+            if (User.IsInRole(Roles.Admin) &&
+                role == Roles.SuperAdmin)
+            {
+                return Forbid();
+            }
+
+            // ==========================================
+            // Validate Department
+            // ==========================================
+
+            string? departmentName = null;
+
+            if (role == Roles.User)
+            {
+                if (string.IsNullOrWhiteSpace(addUserDTO.DepartmentName))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Department name is required for users."
+                    });
+                }
+
+                departmentName =
+                    addUserDTO.DepartmentName.Trim();
             }
 
             // ==========================================
@@ -98,12 +151,9 @@ namespace ScopeSkyCafeteria.Controllers
                 UserName = addUserDTO.UserName,
                 PhoneNumber = addUserDTO.PhoneNumber,
                 Email = addUserDTO.Email,
+                DepartmentName = departmentName,
                 EmailConfirmed = true
             };
-
-            // ==========================================
-            // Create User
-            // ==========================================
 
             var result =
                 await userManager.CreateAsync(
@@ -119,10 +169,6 @@ namespace ScopeSkyCafeteria.Controllers
             // Assign Role
             // ==========================================
 
-            var role = string.IsNullOrEmpty(addUserDTO.Role)
-                ? Roles.User
-                : addUserDTO.Role;
-
             var roleResult =
                 await userManager.AddToRoleAsync(
                     identityUser,
@@ -130,6 +176,7 @@ namespace ScopeSkyCafeteria.Controllers
 
             if (!roleResult.Succeeded)
             {
+                // Rollback created Identity user
                 await userManager.DeleteAsync(identityUser);
 
                 return BadRequest(roleResult.Errors);
@@ -139,7 +186,18 @@ namespace ScopeSkyCafeteria.Controllers
             // Create Wallet Automatically
             // ==========================================
 
-            await walletRepository.CreateWalletAsync(identityUser.Id);
+            try
+            {
+                await walletRepository.CreateWalletAsync(
+                    identityUser.Id);
+            }
+            catch
+            {
+                // Rollback user if wallet creation fails
+                await userManager.DeleteAsync(identityUser);
+
+                throw;
+            }
 
             // ==========================================
             // Response
@@ -153,6 +211,7 @@ namespace ScopeSkyCafeteria.Controllers
                 phoneNumber = identityUser.PhoneNumber
             });
         }
+
         // ==========================================
         // Login
         // ==========================================

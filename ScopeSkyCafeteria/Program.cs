@@ -164,6 +164,9 @@ builder.Services.AddScoped<ITokenRepository, TokenRepository>();
 builder.Services.AddScoped<IWalletRepository, SQLWalletRepository>();
 builder.Services.AddScoped<IFileStorageService, MinioFileStorageService>();
 builder.Services.AddHttpClient<ITelegramNotificationService, TelegramNotificationService>();
+builder.Services.AddHttpClient();
+builder.Services.AddHostedService<TelegramBotService>();
+
 
 // ==========================================
 // OpenAPI

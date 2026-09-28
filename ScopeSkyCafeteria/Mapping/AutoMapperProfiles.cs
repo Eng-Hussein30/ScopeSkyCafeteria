@@ -23,7 +23,9 @@ namespace ScopeSkyCafeteria.Mapping
                 .ForMember(dest => dest.UserName,
                     opt => opt.MapFrom(src => src.User.UserName))
                 .ForMember(dest => dest.AdminName,
-                    opt => opt.MapFrom(src => src.Admin != null ? src.Admin.UserName : null));
+                    opt => opt.MapFrom(src => src.Admin != null ? src.Admin.UserName : null))
+                .ForMember(dest => dest.DeliveredByAdminName,
+                    opt => opt.MapFrom(src => src.DeliveredByAdmin != null? src.DeliveredByAdmin.UserName: null));
 
             CreateMap<AddOrdersDTO, Order>();
 

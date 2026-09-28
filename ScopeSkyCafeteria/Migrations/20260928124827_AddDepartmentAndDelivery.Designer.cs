@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ScopeSkyCafeteria.Data;
@@ -11,9 +12,11 @@ using ScopeSkyCafeteria.Data;
 namespace ScopeSkyCafeteria.Migrations
 {
     [DbContext(typeof(SSCafeteriaDbContext))]
-    partial class SSCafeteriaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260928124827_AddDepartmentAndDelivery")]
+    partial class AddDepartmentAndDelivery
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -342,9 +345,6 @@ namespace ScopeSkyCafeteria.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
-
-                    b.Property<long?>("TelegramChatId")
-                        .HasColumnType("bigint");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");

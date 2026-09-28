@@ -21,5 +21,15 @@ namespace ScopeSkyCafeteria.Models.DTOs
         public DateTime CreatedAt { get; set; }
 
         public List<OrderItemDTO> OrderItems { get; set; } = new();
+
+        public int OrderNumber { get; set; }
+
+        public string? DepartmentName { get; set; }
+
+        public Guid? DeliveredByAdminId { get; set; }
+
+        public string? DeliveredByAdminName { get; set; }
+
+        public DateTime? DeliveredAt { get; set; }
     }
 }

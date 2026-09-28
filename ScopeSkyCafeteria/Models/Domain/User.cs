@@ -6,6 +6,8 @@ namespace ScopeSkyCafeteria.Models.Domain
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public long? TelegramChatId { get; set; }
+        public string? DepartmentName { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public ICollection<Order> CustomerOrders { get; set; } = new List<Order>();

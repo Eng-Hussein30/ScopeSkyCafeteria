@@ -12,7 +12,13 @@
         public Guid? AdminId { get; set; }
         public User? Admin { get; set; }
 
+        // الأدمن الذي سلّم الطلب
+        public Guid? DeliveredByAdminId { get; set; }
+        public User? DeliveredByAdmin { get; set; }
+
+        public DateTime? DeliveredAt { get; set; }
         public decimal TotalPrice { get; set; }
+
 
         // طريقة الدفع
         public PaymentMethod PaymentMethod { get; set; }
@@ -22,5 +28,10 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+        public string? DepartmentName { get; set; }
+
+  
+
     }
 }
